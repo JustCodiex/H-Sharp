@@ -3,6 +3,17 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace HSharp.IO {
-    class SourceProject {
+    
+    public class SourceProject {
+
+        private string[] m_files;
+
+        public string[] CodeFiles => this.m_files;
+
+        public SourceProject(params string[] files) {
+            this.m_files = files;
+        }
+
     }
+
 }

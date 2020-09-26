@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "H-Sharp-Compiler": {
+      "commandName": "Project",
+      "commandLineArgs": "-testall"
+    }
+  }
+}

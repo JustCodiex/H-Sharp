@@ -1,0 +1,333 @@
+\documentclass{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath}
+\usepackage{latexsym}
+\usepackage{amsfonts}
+\usepackage[normalem]{ulem}
+\usepackage{array}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{siunitx}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{listings}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+\usepackage{caption}
+\usepackage{logicproof}
+\usepackage{longtable}
+\usepackage{syntax}
+\usepackage{lastpage}
+\usepackage[a4paper,left=1in,right=1in,top=1in,bottom=1in]{geometry}
+\usepackage{pdfpages}
+
+%%% Hyperlink setup
+\hypersetup {
+	%linktoc = none
+}
+
+%%% Gramar environment
+\setlength{\grammarparsep}{6pt plus 1pt minus 1pt} % increase separation between rules
+\setlength{\grammarindent}{12em} % increase separation between LHS/RHS 
+\let\syntleft\relax
+\let\syntright\relax
+
+%%% Code environment
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{mathpartir}
+\definecolor{commentsColor}{rgb}{0.497495, 0.497587, 0.497464}
+\definecolor{keywordsColor}{rgb}{0.000000, 0.000000, 0.635294}
+\definecolor{stringColor}{rgb}{0.558215, 0.000000, 0.135316}
+
+\lstset{
+  	basicstyle=\ttfamily\small,                   % the size of the fonts that are used for the code
+  	breakatwhitespace=false,                      % sets if automatic breaks should only happen at whitespace
+  	breaklines=true,                              % sets automatic line breaking
+  	frame=tb,                                     % adds a frame around the code
+  	commentstyle=\color{commentsColor}\textit,    % comment style
+  	keywordstyle=\color{keywordsColor}\bfseries,  % keyword style
+  	stringstyle=\color{stringColor},              % string literal style
+  	numbers=left,                                 % where to put the line-numbers; possible values are (none, left, right)
+  	numbersep=5pt,                                % how far the line-numbers are from the code
+  	numberstyle=\tiny\color{commentsColor},       % the style that is used for the line-numbers
+  	showstringspaces=false,                       % underline spaces within strings only
+  	tabsize=2,                                    % sets default tabsize to 2 spaces
+  	language=c++
+}
+
+% Titles
+\title{H\# Official Documentation}
+\author{The official specification for H\#}
+\date{}
+
+% Page styling
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\rfoot{Page \thepage \hspace{1pt} of \pageref{LastPage}}
+
+% Custom commands
+\newcommand{\newsection}[1]{
+	\phantomsection
+	\addcontentsline{toc}{section}{#1}
+	\section*{\centering #1}
+}
+\newcommand{\newsubsection}[1]{
+	\phantomsection
+	\addcontentsline{toc}{subsection}{#1}
+	\subsection*{#1}
+}
+\newcommand{\newsubsubsection}[1]{
+	\phantomsection
+	\addcontentsline{toc}{subsubsection}{#1}
+	\subsubsection*{#1}
+}
+
+%% Semantic commands
+\newcommand{\envall}{\rho, \mu, \phi, \kappa, \sigma \vdash}
+\newcommand{\envallm}[1]{\rho, \mu, \phi, \kappa, \sigma #1 \vdash}
+\newcommand{\rspace}{ \ \ \ }
+
+%% Grammar commands
+\newcommand{\gtext}[1]{<$#1$>}
+\newcommand{\glit}[1]{\texttt{#1}}
+
+\begin{document}
+\pagestyle{empty}
+\pagenumbering{gobble}
+\maketitle
+\tableofcontents
+\clearpage
+\pagestyle{fancyplain}
+\setcounter{page}{1}
+\pagenumbering{arabic}
+\newsection{Abstract}
+This document is the official document for the H-Sharp (H\#) programming language. The H stands for hybrid - as this is a multi-paradigm programming language heavily inspired by C\# and Scala. This document will only contain the grammar of the language, the operational semantics as well as the type semantics of the language. The operational semantics may be explained with code samples - but obvious uses will not be explained.\\\\
+This document will also contain the byte-instruction semantics. The official compiler, is written in C\# for productivity purposes while the Virtual Machine is implemented using C++. At no point will this document be documenting the internal processes of those applications.
+\newpage
+\newsection{Grammar}
+The offical H\# grammar. Note: $Id$ $\in$ \textsc{VarEnv} and $TypeId$ $\in$ \textsc{TypeEnv}. Both refer to the same grammatical definition, defined by the regular expression:
+$$(\glit{_}|[\glit{a}-\glit{Z}])^+(\glit{_}|[\glit{0}-\glit{9}]|[\glit{a}-\glit{Z}])^*$$
+If multiple elements can occur - and it'd be convenient, the element be sufficed with 'n' to show it may be contain n of such elements. $n\in\{0,1,2,\dots\}$. The notation $e_0\glit{,}\dots\glit{,}e_n$ represents the 1 to nth element with a specific separator. The full grammar is defined as follows:
+\begin{grammar}
+
+	\gtext{CompileUnit} ::= $CompileUnitElement$
+
+	\gtext{CompileUnitElement} ::= $CompileUnitElement$ $CompileUnitElement$
+	\alt $Directive$ | $Scope$ | $ScopeElement$
+
+	\gtext{Scope} ::= \glit{\{} $ScopeElement$ \glit{\}}
+	
+	\gtext{ScopeElement} ::= $ScopeElement$ $ScopeElement$
+	\alt $Expr$\glit{;} | $Scope$ | $Statement$	| $VarDeclaration$\glit{;}
+	
+	\gtext{Expr} ::= $Expr$ | \glit{(}$Expr$\glit{)}
+	\alt $Expr$ $BinaryOp$ $Expr$ | $UnaryOp$ $Expr$ | $Id$ $UnaryOp$
+	\alt $Expr$ \glit{?} $Expr$ \glit{:} $Expr$
+	\alt $Id$
+	\alt $Expr$\glit{(}$Argument$\glit{)}
+	\alt $Expr$\glit{.}$Id$ | $Expr$\glit{?.}$Id$ 
+	\alt $Expr$\glit{.}$Id$\glit{(}$Argument$\glit{)} | $Expr$\glit{?.}$Id$\glit{(}$Argument$\glit{)}
+	\alt $Expr$ \glit{is} $TypeID$ | $Expr$ \glit{is null} $Expr$ \glit{is} $TypeID$ $Id$
+	\alt $Expr$ \glit{is} $TypeID$ $Id$ \glit{where} $Expr$
+	\alt $Expr$ \glit{is not} $TypeID$ | $Expr$ \glit{is not null}
+	\alt $Expr$ \glit{is not} $TypeID$ $Id$ \glit{where} $Expr$ % if type and condition is false
+	\alt $Expr$ \glit{as} $TypeId$
+	\alt \glit{(}$TypeID$\glit{)} $Expr$
+	\alt $Assignment$
+	\alt $Literal$
+
+	\gtext{Directive} ::= \glit{type} $Id$ \glit{=} $TypeId$\glit{;}
+	\alt \glit{using} $Id$\glit{;} | \glit{using} $TypeId$ \glit{from} $Id$\glit{;}
+
+	\gtext{Statement} ::= $Assignment$\glit{;} | $ControlStatement$ | $MatchStatement$\glit{;}
+	\alt $TryCatchStatement$
+	
+	\gtext{ControlStatement} ::= \glit{if} $Expr$ $Scope$
+	\alt \glit{if} $Expr$ $Scope$ \glit{else} $Scope$
+	\alt \glit{if} $Expr$ $Scope$ \glit{else if} $Expr$ $Scope$
+	\alt \glit{if} $Expr$ $Scope$ \glit{else if} $Expr$ $Scope$ \glit{else} $Scope$
+	\alt \glit{while} $Expr$ $Scope$
+	\alt \glit{do} $Scope$ \glit{while} $Expr$\glit{;}
+	\alt \glit{for} \glit{(}$Assignment$\glit{;} $Expr$\glit{;} $Expr$\glit{)} $Scope$
+	\alt \glit{for} \glit{(}$VarDeclaration$\glit{;} $Expr$\glit{;} $Expr$\glit{)} $Scope$
+	\alt \glit{foreach} \glit{(}$TypeId$ $Id$ {in} $Expr$\glit{)} $Scope$
+	\alt \glit{throw} $TypeID$\glit{(}$Argument$\glit{)}
+	\alt \glit{return} $Expr$\glit{;}
+	\alt \glit{break;}
+	
+	\gtext{MatchStatement} ::= $Expr$ \glit{match \{} $MatchCase$ \glit{\}} 
+	
+	\gtext{MatchCase} ::= $MatchCase$\glit{,} $MatchCase$
+	\alt \glit{case} $Literal$ \glit{=>} $Expr$ | \glit{case} $Literal$ \glit{=>} $Scope$
+	\alt \glit{case} \glit{_} \glit{=>} $Expr$ | \glit{case} \glit{_} \glit{=>} $Scope$
+
+	\newpage	
+	
+	\gtext{TryCatchStatement} ::= \glit{try} $Scope$ \glit{catch} $TypeId$ $Id$ $Scope$  
+	\alt \glit{try} $Scope$ \glit{catch} $TypeId$ $Id$ $Scope$ \glit{finally} $Scope$
+
+	\gtext{Assignment} ::= $Id$ \glit{=} $Expr$
+	\alt $Id$ \glit{+=} $Expr$ | $Id$ \glit{-=} $Expr$
+	\alt $Id$ \glit{*=} $Expr$ | $Id$ \glit{/=} $Expr$
+	\alt $Id$ \glit{\&=} $Expr$ | $Id$ \glit{|=} $Expr$
+	\alt $Id$ \glit{\%=} $Expr$
+	
+	\gtext{Declaration} ::= $VarDecl$
+	\alt $FuncDecl$
+	\alt $ClassDecl$
+	\alt $StaticClassDecl$
+	\alt $InterfaceDecl$
+	\alt $UnionDecl$
+	\alt $EnumDecl$
+	\alt $StructDecl$
+	
+	\gtext{ClassDecl} ::= \glit{class} $Id$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt $AccessMod$ \glit{class} $Id$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt $StorageMod$ \glit{class} $Id$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt $AccessMod$ $StorageMod$ \glit{class} $Id$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt \glit{class} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
+	\alt $AccessMod$ \glit{class} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
+	\alt $StorageMod$ \glit{class} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
+	\alt $AccessMod$ $StorageMod$ \glit{class} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
+	
+	\gtext{StructDecl} ::= \glit{struct} $Id$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt $AccessMod$ \glit{struct} $Id$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt $StorageMod$ \glit{struct} $Id$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt $AccessMod$ $StorageMod$ \glit{struct} $Id$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt \glit{struct} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
+	\alt $AccessMod$ \glit{struct} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
+	\alt $StorageMod$ \glit{struct} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
+	\alt $AccessMod$ $StorageMod$ \glit{struct} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
+	
+	\gtext{StaticClassDecl} ::= \glit{object} $Id$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt $AccessMod$ \glit{object} $Id$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt \glit{object} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
+	\alt $AccessMod$ \glit{object} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
+	
+	\gtext{InterfaceDecl} ::= \glit{interface} $Id$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt $AccessMod$ \glit{interface} $Id$ \glit{\{} $ClassMembe$ \glit{\}}
+	
+	\gtext{ClassMember} ::= $ClassMember$ $ClassMember$
+	\alt $VarDecl$\glit{;} | $AcessMod$ $VarDecl$\glit{;}
+	\alt $FuncDecl$ | $ClassDecl$ | $UnionDecl$ | $EnumDecl$
+	\alt \glit{event} $TypeId$ $id$\glit{;} | $AccessMod$ \glit{event} $TypeId$ $id$\glit{;}
+	
+	\gtext{VarDecl} ::= $TypeId$ $Id$ \glit{=} $Expr$
+	\alt $StorageMod$ $TypeId$ $Id$ \glit{=} $Expr$
+	\alt \glit{var} $Id$ \glit{=} $Expr$
+	\alt $StorageMod$ \glit{var} $Id$ \glit{=} $Expr$
+
+	\newpage	
+	
+	\gtext{FuncDecl} ::=  $Id$\glit{(}$Param$\glit{):} $TypeId$ $Scope$ % Const-unassignable
+	\alt $AccessMod$ $Id$\glit{(}$Param$\glit{):} $TypeId$ $Scope$ % Const-unassignable
+	\alt $Id$ \glit{= (}$Param$\glit{):} $TypeId$ $Scope$  % Reassignable
+	\alt $AccessMod$ $Id$ \glit{= (}$Param$\glit{):} $TypeId$ $Scope$  % Reassignable
+	\alt $AccessMod$ \glit{const} $Id$ \glit{= (}$Param$\glit{):} $TypeId$ $Scope$  % Reassignable
+	
+	\gtext{UnionDecl} ::= \glit{union} $Id$ \glit{\{} $UnionMember$ \glit{\}}
+	\alt $AccessMod$ \glit{union} $Id$ \glit{\{} $UnionMember$ \glit{\}}
+	\alt $AccessMod$ \glit{static union} $Id$ \glit{\{} $UnionMember$ \glit{\}}
+	
+	\gtext{UnionMember} ::= $UnionMember$ $UnionMember$
+	\alt $TypeId$ $Id$\glit{;}	
+	
+	\gtext{EnumDecl} ::= \glit{enum} $Id$ \glit{\{} $EnumBodyMember$ \glit{\}}
+	\alt $AccessMod$ \glit{enum} $Id$ \glit{\{} $EnumBodyMember$ \glit{\}}
+	\alt \glit{enum} $Id$\glit{(}$EnumMember$\glit{)\{} $EnumBodyMember$ \glit{\}}
+	\alt $AccessMod$ \glit{enum} $Id$ \glit{(}$EnumMember$\glit{)} \glit{\{} $EnumBodyMember$ \glit{\}}
+	
+	\gtext{EnumBodyMember} ::= $EnumMember$ | $FuncDecl$ | $FuncDecl$ $EnumBodyMember$
+	
+	\gtext{EnumMember} ::=  $EnumMember$\glit{,} $EnumMember$
+	\alt $Id$ | $Id$ \glit{=} $LiteralNoNull$
+	
+	\gtext{StorageMod} ::= \glit{const} | \glit{static} | \glit{abstract} | \glit{override} | \glit{virtual} | \glit{final} | \glit{lazy}
+	
+	\gtext{AccessMod} ::= \glit{public} | \glit{private} | \glit{protected} | \glit{internal} | \glit{external}
+	
+	\gtext{Param} ::= $Param$\glit{,} $Param$ 
+	\alt $TypeId$ $Id$ | \glit{const} $TypeId$ $Id$
+	
+	\gtext{Argument} ::= $Expr$ | $Expr$\glit{,} $Expr$
+	
+	\gtext{BinaryOp} ::= \glit{+} | \glit{-} | \glit{*} | \glit{/} | \glit{\%} | \glit{\textless} | \glit{\textgreater} | \glit{\textless}= | \glit{\textgreater}= | \glit{==} | \glit{!=}
+	\alt \glit{\textbar\textbar} | $\&\&$ | \glit{\textbar} | $\&$ | \glit{\textless\textless} | \glit{\textgreater\textgreater} | \glit{=>} | \glit{::} | \glit{??} | \glit{..}
+	
+	\gtext{UnaryOp} ::= \glit{-} | \glit{!} | \glit{\#} | \glit{++} | \glit{--}
+	
+	\gtext{LiteralNoNull}	::= $IntLit$ | $FloatLit$ | $DoubleLit$ | $BoolLit$ | $CharLit$ | $StringLit$
+	
+	\gtext{Literal}	::= $LiteralNoNull$ | $NullLit$
+	
+	\gtext{Letter} ::= [\glit{a}-\glit{Z}]
+	
+	\gtext{Digit} ::= [\glit{0}-\glit{9}]
+	
+	\gtext{IntLit} ::= $Digit^+$
+	
+	\gtext{FloatLit} ::= $Digit^+$\glit{.}$Digit^+$\glit{f}
+	
+	\gtext{DoubleLit} ::= $Digit^+$\glit{.}$Digit^+$
+
+	\gtext{CharLit} ::= \glit{'}$Letter$\glit{'} | \glit{'$\backslash$}$Letter$\glit{'}
+	
+	\gtext{StringLit} ::= \glit{\"}$(Letter$|$Digit)^*$\glit{\"}	
+	
+	\gtext{BoolLit} ::= \glit{true} | \glit{false}
+	
+	\gtext{NullLit} ::= \glit{null}
+
+\end{grammar}
+\newpage
+\newsection{Operational Semantics}
+\begin{figure}[H]
+\centering
+	\begin{mathparpagebreakable}
+		\infer[VariableLookup]
+		{\envall \rho (x) = v \neq (\ell, \omega, \sigma)}
+		{\envall x \Rightarrow v, \sigma}
+		\and
+		\infer[HeapObjectLookup]
+		{\envall \rho (x) = (\ell, \omega, \sigma) \rspace \sigma(\ell)=v \rspace \omega = \texttt{O}}
+		{\envall x \Rightarrow v, \sigma}
+		\and
+		\infer[HeapStringLookup]
+		{\envall \rho (x) = (\ell, \omega, \sigma) \rspace \sigma(\ell)=v \rspace \omega = \texttt{S}}
+		{\envall x \Rightarrow v, \sigma}
+		\and
+		\infer[HeapArrayLookup]
+		{\envall \rho (x) = (\ell, \omega, \sigma) \rspace \sigma(\ell)=v \rspace \omega = \texttt{A}}
+		{\envall x \Rightarrow v, \sigma}
+		\and
+	\end{mathparpagebreakable}
+\end{figure}\noindent
+\newpage
+\newsection{Type Semantics}
+\begin{figure}[H]
+\centering
+	\begin{mathparpagebreakable}
+		\infer[VariableLookup]
+		{\envall \rho (x) = v \neq (\ell, \omega, \sigma)}
+		{\envall x \Rightarrow v, \sigma}
+		\and
+		\infer[HeapObjectLookup]
+		{\envall \rho (x) = (\ell, \omega, \sigma) \rspace \sigma(\ell)=v \rspace \omega = \texttt{O}}
+		{\envall x \Rightarrow v, \sigma}
+		\and
+		\infer[HeapStringLookup]
+		{\envall \rho (x) = (\ell, \omega, \sigma) \rspace \sigma(\ell)=v \rspace \omega = \texttt{S}}
+		{\envall x \Rightarrow v, \sigma}
+		\and
+		\infer[HeapArrayLookup]
+		{\envall \rho (x) = (\ell, \omega, \sigma) \rspace \sigma(\ell)=v \rspace \omega = \texttt{A}}
+		{\envall x \Rightarrow v, \sigma}
+		\and
+	\end{mathparpagebreakable}
+\end{figure}\noindent
+\end{document}

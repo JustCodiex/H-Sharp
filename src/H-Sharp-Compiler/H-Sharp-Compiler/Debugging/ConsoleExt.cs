@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace HSharp.Parsing.AbstractSnyaxTree {
-    interface IASTNode {
+namespace HSharp.Debugging {
+    class ConsoleExt {
     }
 }

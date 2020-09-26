@@ -1,8 +1,124 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using HSharp.IO;
+using HSharp.Parsing.AbstractSnyaxTree;
 
 namespace HSharp.Compiling {
-    class ASTCompiler {
+
+    public class ASTCompiler {
+
+        private AST[] m_asts;
+
+        public ASTCompiler(AST[] asts) {
+            this.m_asts = asts;
+        }
+
+        public ProgramOutput GetProgram() {
+
+
+
+            return new ProgramOutput();
+
+        }
+
+        public CompileResult Compile() {
+
+            foreach (AST ast in this.m_asts) {
+                CompileResult cResult = this.CompileAst(ast);
+                if (!cResult) {
+                    return cResult;
+                }
+            }
+
+            return new CompileResult(true);
+
+        }
+
+        private CompileResult CompileAst(AST ast) {
+
+            List<CompiledFunction> compiledInstructions = new List<CompiledFunction>();
+
+            CompileUnitNode unit = ast.Root;
+            CompiledFunction topLevelFunc = new CompiledFunction("");
+
+            CompileContext context = new CompileContext();
+            foreach (ASTNode node in unit) {
+
+                // TODO: Check node for being a declaration of any kind
+
+                // ... else:
+                topLevelFunc.Instructions.AddRange(this.CompileNode(node, context));
+                if (!context.Result) {
+                    return context.Result;
+                }
+
+            }
+
+            compiledInstructions.Add(topLevelFunc);
+
+            return new CompileResult(true);
+
+        }
+
+        static List<ByteInstruction> Instruction(ByteInstruction instruction) 
+            => new List<ByteInstruction>() { instruction };
+
+        private List<ByteInstruction> CompileNode(ASTNode node, CompileContext context) {
+            List<ByteInstruction> instructions = node switch
+            {
+                IntLitNode intLitNode => this.CompileConstant(intLitNode),
+                IdentifierNode idNode => Instruction(new ByteInstruction(Bytecode.PUSH, context.Lookup(idNode.Content))),
+                BinOpNode binOpNode => this.CompileBinaryOperation(binOpNode, context),
+                VarDeclNode vDeclNode => this.CompileVariableDeclaration(vDeclNode, context),
+                _ => null,
+            };
+            return instructions;
+        }
+
+        private List<ByteInstruction> CompileBinaryOperation(BinOpNode op, CompileContext context) {
+            List<ByteInstruction> instructions = new List<ByteInstruction>();
+            instructions.AddRange(this.CompileNode(op.Left, context));
+            instructions.AddRange(this.CompileNode(op.Right, context));
+            if (!context.Result) { return null; }
+            Bytecode bytecode = op.Content switch
+            {
+                "+" => Bytecode.ADD,
+                "-" => Bytecode.SUB,
+                "/" => Bytecode.DIV,
+                "*" => Bytecode.MUL,
+                _ => Bytecode.NOP,
+            };
+            if (bytecode is Bytecode.NOP) {
+                context.UpdateResultIfErr(new CompileResult(false));
+                return null;
+            }
+            instructions.Add(new ByteInstruction(bytecode));
+            return instructions;
+        }
+
+        private List<ByteInstruction> CompileVariableDeclaration(VarDeclNode decl, CompileContext context) {
+            List<ByteInstruction> instructions = new List<ByteInstruction>();
+            instructions.AddRange(this.CompileNode(decl.AssignToExpr, context));
+            if (!context.Result) {
+                return null;
+            }
+            instructions.Add(new ByteInstruction(Bytecode.ENTER, context.Enter(decl.VarName)));
+            return instructions;
+        }
+
+        private List<ByteInstruction> CompileConstant(ASTNode node) {
+            List<ByteInstruction> instructions = new List<ByteInstruction>();
+            switch (node) {
+                case IntLitNode ilit:
+                    instructions.Add(new ByteInstruction(Bytecode.LCSI32, ilit.Integer));
+                    break;
+                default:
+                    break;
+            }
+            return instructions;
+        }
+
     }
+
 }

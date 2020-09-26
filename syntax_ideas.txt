@@ -1,0 +1,10 @@
+public func(int x, int y): int { 1; } // 
+
+public func = (int x, int y): int { 1; }
+
+func(int x, int y): int { 0; }
+
+func = (int x, int y): int { 0; }
+
+public table c(int x);
+c.newMember = (int x): int { x * this.x; }
