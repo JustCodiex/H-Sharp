@@ -1,5 +1,7 @@
 \babel@toc {english}{}
 \contentsline {section}{Abstract}{1}{section*.2}%
 \contentsline {section}{Grammar}{2}{section*.4}%
-\contentsline {section}{Operational Semantics}{5}{section*.6}%
-\contentsline {section}{Type Semantics}{6}{section*.9}%
+\contentsline {section}{Operational Semantics}{6}{section*.6}%
+\contentsline {section}{Type Semantics}{7}{section*.9}%
+\contentsline {section}{Compilation Semantics}{8}{section*.12}%
+\contentsline {section}{Bytecode Semantics}{9}{section*.14}%

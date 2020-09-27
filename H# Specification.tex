@@ -118,17 +118,17 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\gtext{CompileUnit} ::= $CompileUnitElement$
 
 	\gtext{CompileUnitElement} ::= $CompileUnitElement$ $CompileUnitElement$
-	\alt $Directive$ | $Scope$ | $ScopeElement$
+	\alt $Directive$ | $Scope$ | $ScopeElement$ | $Declaration$
 
 	\gtext{Scope} ::= \glit{\{} $ScopeElement$ \glit{\}}
 	
 	\gtext{ScopeElement} ::= $ScopeElement$ $ScopeElement$
-	\alt $Expr$\glit{;} | $Scope$ | $Statement$	| $VarDeclaration$\glit{;}
+	\alt $Expr$\glit{;} | $Statement$	| $VarDeclaration$\glit{;}
 	
-	\gtext{Expr} ::= $Expr$ | \glit{(}$Expr$\glit{)}
+	\gtext{Expr} ::= $Expr$ | \glit{(}$Expr$\glit{)} | $Scope$ | $LambdaExpr$
 	\alt $Expr$ $BinaryOp$ $Expr$ | $UnaryOp$ $Expr$ | $Id$ $UnaryOp$
 	\alt $Expr$ \glit{?} $Expr$ \glit{:} $Expr$
-	\alt $Id$
+	\alt $Id$ | $Name$ | \glit{this} | \glit{base}
 	\alt $Expr$\glit{(}$Argument$\glit{)}
 	\alt $Expr$\glit{.}$Id$ | $Expr$\glit{?.}$Id$ 
 	\alt $Expr$\glit{.}$Id$\glit{(}$Argument$\glit{)} | $Expr$\glit{?.}$Id$\glit{(}$Argument$\glit{)}
@@ -140,7 +140,9 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt \glit{(}$TypeID$\glit{)} $Expr$
 	\alt $Assignment$
 	\alt $Literal$
-
+	
+	\gtext{LambdaExpr} ::= \glit{(}$Param$\glit{) =>} $Expr$
+	
 	\gtext{Directive} ::= \glit{type} $Id$ \glit{=} $TypeId$\glit{;}
 	\alt \glit{using} $Id$\glit{;} | \glit{using} $TypeId$ \glit{from} $Id$\glit{;}
 
@@ -160,14 +162,14 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt \glit{return} $Expr$\glit{;}
 	\alt \glit{break;}
 	
+	\newpage	
+	
 	\gtext{MatchStatement} ::= $Expr$ \glit{match \{} $MatchCase$ \glit{\}} 
 	
 	\gtext{MatchCase} ::= $MatchCase$\glit{,} $MatchCase$
 	\alt \glit{case} $Literal$ \glit{=>} $Expr$ | \glit{case} $Literal$ \glit{=>} $Scope$
 	\alt \glit{case} \glit{_} \glit{=>} $Expr$ | \glit{case} \glit{_} \glit{=>} $Scope$
 
-	\newpage	
-	
 	\gtext{TryCatchStatement} ::= \glit{try} $Scope$ \glit{catch} $TypeId$ $Id$ $Scope$  
 	\alt \glit{try} $Scope$ \glit{catch} $TypeId$ $Id$ $Scope$ \glit{finally} $Scope$
 
@@ -177,7 +179,8 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt $Id$ \glit{\&=} $Expr$ | $Id$ \glit{|=} $Expr$
 	\alt $Id$ \glit{\%=} $Expr$
 	
-	\gtext{Declaration} ::= $VarDecl$
+	\gtext{Declaration} ::=  $NamespaceDecl$
+	\alt $VarDecl$
 	\alt $FuncDecl$
 	\alt $ClassDecl$
 	\alt $StaticClassDecl$
@@ -185,6 +188,8 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt $UnionDecl$
 	\alt $EnumDecl$
 	\alt $StructDecl$
+	
+	\gtext{NamespaceDecl} ::= \glit{namespace} $Name$ $Scope$
 	
 	\gtext{ClassDecl} ::= \glit{class} $Id$ \glit{\{} $ClassMember$ \glit{\}}
 	\alt $AccessMod$ \glit{class} $Id$ \glit{\{} $ClassMember$ \glit{\}}
@@ -217,13 +222,12 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt $FuncDecl$ | $ClassDecl$ | $UnionDecl$ | $EnumDecl$
 	\alt \glit{event} $TypeId$ $id$\glit{;} | $AccessMod$ \glit{event} $TypeId$ $id$\glit{;}
 	
-	\gtext{VarDecl} ::= $TypeId$ $Id$ \glit{=} $Expr$
-	\alt $StorageMod$ $TypeId$ $Id$ \glit{=} $Expr$
-	\alt \glit{var} $Id$ \glit{=} $Expr$
-	\alt $StorageMod$ \glit{var} $Id$ \glit{=} $Expr$
-
 	\newpage	
 	
+	\gtext{VarDecl} ::= $TypeId$ $Id$ \glit{=} $Expr$ | $StorageMod$ $TypeId$ $Id$ \glit{=} $Expr$
+	\alt \glit{var} $Id$ \glit{=} $Expr$ | $StorageMod$ \glit{var} $Id$ \glit{=} $Expr$
+	\alt $LambdaType$ $Id$ \glit{=>} $LambdaExpr$
+
 	\gtext{FuncDecl} ::=  $Id$\glit{(}$Param$\glit{):} $TypeId$ $Scope$ % Const-unassignable
 	\alt $AccessMod$ $Id$\glit{(}$Param$\glit{):} $TypeId$ $Scope$ % Const-unassignable
 	\alt $Id$ \glit{= (}$Param$\glit{):} $TypeId$ $Scope$  % Reassignable
@@ -253,9 +257,19 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	
 	\gtext{Param} ::= $Param$\glit{,} $Param$ 
 	\alt $TypeId$ $Id$ | \glit{const} $TypeId$ $Id$
+	\alt $LambdaType$ $Id$
 	
 	\gtext{Argument} ::= $Expr$ | $Expr$\glit{,} $Expr$
 	
+	\gtext{Name} ::= $Id$ | $Name$\glit{.}$Name$	
+	
+	\newpage	
+	
+	\gtext{LambdaType} ::= \glit{(}$LambdaParamType$\glit{):} $TypeId$
+	\alt $TypeId$ \glit{:} $TypeId$
+	
+	\gtext{LambdaParamType} ::= $TypeId$ | $TypeId$\glit{,} $TypeId$
+
 	\gtext{BinaryOp} ::= \glit{+} | \glit{-} | \glit{*} | \glit{/} | \glit{\%} | \glit{\textless} | \glit{\textgreater} | \glit{\textless}= | \glit{\textgreater}= | \glit{==} | \glit{!=}
 	\alt \glit{\textbar\textbar} | $\&\&$ | \glit{\textbar} | $\&$ | \glit{\textless\textless} | \glit{\textgreater\textgreater} | \glit{=>} | \glit{::} | \glit{??} | \glit{..}
 	
@@ -330,4 +344,8 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 		\and
 	\end{mathparpagebreakable}
 \end{figure}\noindent
+\newpage
+\newsection{Compilation Semantics}
+\newpage
+\newsection{Bytecode Semantics}
 \end{document}

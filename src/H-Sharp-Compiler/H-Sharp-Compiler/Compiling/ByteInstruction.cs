@@ -1,4 +1,6 @@
-﻿namespace HSharp.Compiling {
+﻿using System;
+
+namespace HSharp.Compiling {
     
     public struct ByteInstruction {
     
@@ -17,6 +19,20 @@
         }
 
         public override string ToString() => (this.Args?.Length ?? 0) == 0 ? this.Op.ToString() : $"{this.Op} [{string.Join(", ", this.Args)}]";
+        public long GetSize() {
+            long sz = sizeof(Bytecode);
+            foreach (object o in Args) {
+                sz += o switch
+                {
+                    short => sizeof(short),
+                    ushort => sizeof(ushort),
+                    int => sizeof(int),
+                    uint => sizeof(uint),
+                    _ => throw new NotSupportedException()
+                };
+            }
+            return sz;
+        }
 
     }
 

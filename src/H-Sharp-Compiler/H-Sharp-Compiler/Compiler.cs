@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using HSharp.Analysis.Verifying;
 using HSharp.Compiling;
-using HSharp.Debugging;
 using HSharp.IO;
 using HSharp.Parsing;
 using HSharp.Parsing.AbstractSnyaxTree;
@@ -23,6 +21,14 @@ namespace HSharp {
                 asts[i] = ast;
             }
 
+            VarsVerifier vVerifier = new VarsVerifier();
+            for (int i = 0; i < asts.Length; i++) {
+                var varsResult = vVerifier.Vars(asts[i]);
+                if (!varsResult) {
+                    return varsResult;
+                }
+            }
+
             // TODO: Run static checks
 
             ASTCompiler astCompiler = new ASTCompiler(asts);
@@ -35,7 +41,7 @@ namespace HSharp {
             ProgramOutput compilerOutput = astCompiler.GetProgram();
 
             if (compilerOutput is not null) {
-                compilerOutput.Save("output.bin");
+                compilerOutput.Save(project.Output);
                 return new CompileResult(true);
             } else {
                 return new CompileResult(false);

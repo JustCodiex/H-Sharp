@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.IO;
 
 namespace HSharp.IO {
     
@@ -10,8 +8,16 @@ namespace HSharp.IO {
 
         public string[] CodeFiles => this.m_files;
 
+        public string Name { get; }
+
+        public string Output { get; }
+
         public SourceProject(params string[] files) {
             this.m_files = files;
+            if (this.m_files.Length > 0) {
+                this.Name = Path.GetFileNameWithoutExtension(this.m_files[0]);
+                this.Output = this.m_files[0].Replace(".hsharp", ".bin");
+            }
         }
 
     }

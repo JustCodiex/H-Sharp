@@ -9,6 +9,7 @@ namespace HSharp.Compiling {
     public class ASTCompiler {
 
         private AST[] m_asts;
+        private CompiledFunction[] m_compiledFuncs;
 
         public ASTCompiler(AST[] asts) {
             this.m_asts = asts;
@@ -16,9 +17,35 @@ namespace HSharp.Compiling {
 
         public ProgramOutput GetProgram() {
 
+            ProgramOutput program = new ProgramOutput();
+            Dictionary<string, long> offsets = new Dictionary<string, long>();
+            List<ByteInstruction> allInstructions = new List<ByteInstruction>();
+            long offset = 0;
 
+            for (int i = 0; i < this.m_compiledFuncs.Length; i++) {
 
-            return new ProgramOutput();
+                offsets.Add(this.m_compiledFuncs[i].Name, offset);
+
+                for (int j = 0; j < this.m_compiledFuncs[i].Instructions.Count; j++) {
+                    ByteInstruction instruction = this.m_compiledFuncs[i].Instructions[j];
+                    allInstructions.Add(instruction);
+                    offset += instruction.GetSize();
+                }
+
+                long remainder = offset % 4;
+                if (remainder != 0) {
+                    for (int j = 0; j < remainder; j++) {
+                        allInstructions.Add(new ByteInstruction(Bytecode.NOP));
+                    }
+                    offset += remainder;
+                }
+
+            }
+
+            program.SetInstructions(allInstructions.ToArray());
+            program.SetOffsets(offsets, offset);
+
+            return program;
 
         }
 
@@ -57,6 +84,8 @@ namespace HSharp.Compiling {
 
             compiledInstructions.Add(topLevelFunc);
 
+            this.m_compiledFuncs = compiledInstructions.ToArray();
+
             return new CompileResult(true);
 
         }
@@ -71,6 +100,8 @@ namespace HSharp.Compiling {
                 IdentifierNode idNode => Instruction(new ByteInstruction(Bytecode.PUSH, context.Lookup(idNode.Content))),
                 BinOpNode binOpNode => this.CompileBinaryOperation(binOpNode, context),
                 VarDeclNode vDeclNode => this.CompileVariableDeclaration(vDeclNode, context),
+                ScopeNode scopeNode => this.CompileScope(scopeNode, context),
+                GroupedExpressionNode groupNode => this.CompileGroupedExpression(groupNode, context),
                 _ => null,
             };
             return instructions;
@@ -115,6 +146,30 @@ namespace HSharp.Compiling {
                     break;
                 default:
                     break;
+            }
+            return instructions;
+        }
+
+        private List<ByteInstruction> CompileScope(ScopeNode node, CompileContext context) {
+            List<ByteInstruction> instructions = new List<ByteInstruction>();
+            for (int i = 0; i < node.Nodes.Count; i++) {
+                instructions.AddRange(this.CompileNode(node[i], context));
+                if (!context.Result) {
+                    return null;
+                }
+            }
+            // foreach variable introdced in scope
+                // exit scope
+            return instructions;
+        }
+
+        private List<ByteInstruction> CompileGroupedExpression(GroupedExpressionNode node, CompileContext context) {
+            List<ByteInstruction> instructions = new List<ByteInstruction>();
+            for (int i = 0; i < node.Nodes.Count; i++) {
+                instructions.AddRange(this.CompileNode(node[i], context));
+                if (!context.Result) {
+                    return null;
+                }
             }
             return instructions;
         }
