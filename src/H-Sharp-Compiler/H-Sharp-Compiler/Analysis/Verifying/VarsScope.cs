@@ -22,6 +22,16 @@ namespace HSharp.Analysis.Verifying {
 
         public ushort Lookup(string v) => this.stack.Top(v);
 
+        public bool Lookup(string v, out ushort index) {
+            if (this.stack.Exists(v)) {
+                index = this.Lookup(v);
+                return true;
+            } else {
+                index = ushort.MaxValue;
+                return false;
+            }
+        }
+
         public void Exit(string v) => this.stack.Exit(v);
 
     }

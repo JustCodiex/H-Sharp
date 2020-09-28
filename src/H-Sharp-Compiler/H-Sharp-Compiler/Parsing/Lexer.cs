@@ -116,7 +116,7 @@ namespace HSharp.Parsing {
 
                         break;
                     case "op":
-                        if (match.Value.CompareTo(";") == 0 || match.Value.CompareTo(";") == 0) {
+                        if (match.Value.CompareTo(";") == 0 || match.Value.CompareTo(",") == 0) {
                             tokens.Add(new LexToken(LexTokenType.Separator, match.Value, new SourcePosition(ln, cl)));
                         } else if (match.Value.CompareTo("(") == 0) {
                             tokens.Add(new LexToken(LexTokenType.ExpressionStart, match.Value, new SourcePosition(ln, cl)));

@@ -28,6 +28,7 @@ namespace HSharp.Compiling {
                     ushort => sizeof(ushort),
                     int => sizeof(int),
                     uint => sizeof(uint),
+                    byte => sizeof(byte),
                     _ => throw new NotSupportedException()
                 };
             }

@@ -1,8 +1,13 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Text;
 using HSharp.IO;
 using HSharp.Parsing.AbstractSnyaxTree;
+using HSharp.Parsing.AbstractSnyaxTree.Declaration;
+using HSharp.Parsing.AbstractSnyaxTree.Expression;
+using HSharp.Parsing.AbstractSnyaxTree.Literal;
+using System.Linq;
 
 namespace HSharp.Compiling {
 
@@ -67,17 +72,25 @@ namespace HSharp.Compiling {
             List<CompiledFunction> compiledInstructions = new List<CompiledFunction>();
 
             CompileUnitNode unit = ast.Root;
-            CompiledFunction topLevelFunc = new CompiledFunction("");
+            CompiledFunction topLevelFunc = new CompiledFunction($"_<{Path.GetFileNameWithoutExtension(ast.Source)}>");
 
             CompileContext context = new CompileContext();
             foreach (ASTNode node in unit) {
 
-                // TODO: Check node for being a declaration of any kind
+                if (node is IDecl decl) {
 
-                // ... else:
-                topLevelFunc.Instructions.AddRange(this.CompileNode(node, context));
-                if (!context.Result) {
-                    return context.Result;
+                    compiledInstructions.AddRange(this.CompileDeclaration(decl, context));
+                    if (!context.Result) {
+                        return context.Result;
+                    }
+
+                } else {
+
+                    topLevelFunc.Instructions.AddRange(this.CompileNode(node, context));
+                    if (!context.Result) {
+                        return context.Result;
+                    }
+
                 }
 
             }
@@ -90,18 +103,65 @@ namespace HSharp.Compiling {
 
         }
 
+        private List<CompiledFunction> CompileDeclaration(IDecl decl, CompileContext context) {
+
+            switch (decl) {
+                case FuncDeclNode funcDecl:
+                    return new List<CompiledFunction>() { this.CompileFunction(funcDecl, context) };
+                case ClassDeclNode classDecl:
+                    List<CompiledFunction> funcs = new List<CompiledFunction>();
+                    funcs.AddRange(classDecl.Methods.Select(x => this.CompileFunction(x, context)));
+                    if (!context.Result) {
+                        return new List<CompiledFunction>();
+                    }
+                    bool allPass = classDecl.Classes.Select(x => this.CompileDeclaration(x, context)).All(k => {
+                        funcs.AddRange(k);
+                        return context.Result;
+                    });
+                    if (!allPass) {
+                        return new List<CompiledFunction>();
+                    }
+                    return funcs;
+                default:
+                    return new List<CompiledFunction>();
+            }
+
+        }
+
         static List<ByteInstruction> Instruction(ByteInstruction instruction) 
             => new List<ByteInstruction>() { instruction };
+
+        private CompiledFunction CompileFunction(FuncDeclNode node, CompileContext context) {
+
+            List<ByteInstruction> instructions = new List<ByteInstruction>();
+
+            for (int i = 0; i < node.Params.Count; i++) {
+                instructions.Add(new ByteInstruction(Bytecode.ENTER, node.Params.GetParameterId(node.Params.Count - 1 - i).Index));
+            }
+
+            instructions.AddRange(this.CompileNode(node.Body, context));
+            if (!context.Result) {
+                return null;
+            }
+
+            instructions.Add(new ByteInstruction(Bytecode.RET));
+
+            return new CompiledFunction(node.Name) {
+                Instructions = instructions
+            };
+
+        }
 
         private List<ByteInstruction> CompileNode(ASTNode node, CompileContext context) {
             List<ByteInstruction> instructions = node switch
             {
                 IntLitNode intLitNode => this.CompileConstant(intLitNode),
-                IdentifierNode idNode => Instruction(new ByteInstruction(Bytecode.PUSH, idNode.Index)),
+                IdentifierNode idNode => Instruction(new ByteInstruction(idNode.IsFuncIdentifier ? Bytecode.PUSHCLOSURE : Bytecode.PUSH, idNode.Index)),
                 BinOpNode binOpNode => this.CompileBinaryOperation(binOpNode, context),
                 VarDeclNode vDeclNode => this.CompileVariableDeclaration(vDeclNode, context),
+                CallNode callNode => this.CompileCallExpression(callNode, context),
                 ScopeNode scopeNode => this.CompileScope(scopeNode, context),
-                GroupedExpressionNode groupNode => this.CompileGroupedExpression(groupNode, context),
+                ExpressionNode groupNode => this.CompileGroupedExpression(groupNode, context),
                 _ => null,
             };
             return instructions;
@@ -118,10 +178,11 @@ namespace HSharp.Compiling {
                 "-" => Bytecode.SUB,
                 "/" => Bytecode.DIV,
                 "*" => Bytecode.MUL,
+                "=" => Bytecode.STORELOC,
                 _ => Bytecode.NOP,
             };
             if (bytecode is Bytecode.NOP) {
-                context.UpdateResultIfErr(new CompileResult(false));
+                context.UpdateResultIfErr(new CompileResult(false, $"Unknown binary operation '{op.Content}'").SetOrigin(op.Pos));
                 return null;
             }
             instructions.Add(new ByteInstruction(bytecode));
@@ -164,7 +225,7 @@ namespace HSharp.Compiling {
             return instructions;
         }
 
-        private List<ByteInstruction> CompileGroupedExpression(GroupedExpressionNode node, CompileContext context) {
+        private List<ByteInstruction> CompileGroupedExpression(ExpressionNode node, CompileContext context) {
             List<ByteInstruction> instructions = new List<ByteInstruction>();
             for (int i = 0; i < node.Nodes.Count; i++) {
                 instructions.AddRange(this.CompileNode(node[i], context));
@@ -172,6 +233,22 @@ namespace HSharp.Compiling {
                     return null;
                 }
             }
+            return instructions;
+        }
+
+        private List<ByteInstruction> CompileCallExpression(CallNode node, CompileContext context) {
+            List<ByteInstruction> instructions = new List<ByteInstruction>();
+            for (int i = 0; i < node.Arguments.Count; i++) {
+                instructions.AddRange(this.CompileNode(node.Arguments[i], context));
+                if (!context.Result) {
+                    return null;
+                }
+            }
+            instructions.AddRange(this.CompileNode(node.IdentifierNode, context));
+            if (!context.Result) {
+                return null;
+            }
+            instructions.Add(new ByteInstruction(Bytecode.CALL, (byte)node.Arguments.Count));
             return instructions;
         }
 

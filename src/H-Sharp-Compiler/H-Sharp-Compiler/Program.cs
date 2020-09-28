@@ -33,7 +33,7 @@ namespace HSharp {
                     if (r) {
                         Console.WriteLine($"Compiled \"{source[i]}\" successfully.");
                     } else {
-                        Console.WriteLine($"Compiled \"{source[i]}\" with error: {r}");
+                        Console.WriteLine($"Compile Error \"{source[i]}\" : {r}");
                     }
                 }
 

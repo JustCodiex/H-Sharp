@@ -46,6 +46,9 @@ namespace HSharp.IO {
                             case int:
                                 writer.Write((int)this.m_instructions[i].Args[j]);
                                 break;
+                            case byte:
+                                writer.Write((byte)this.m_instructions[i].Args[j]);
+                                break;
                             default:
                                 throw new NotSupportedException();
                         };

@@ -15,8 +15,19 @@
         ENTER, // Enter scope
         EXIT, // Exit scope
 
+        STORELOC,
+        STOREFLD,
+        LOADFLD,
+
         PUSH,
+        PUSHCLOSURE,
         POP,
+        RET,
+
+        CALL, // std function call
+
+        INVOKE, // member call
+        VINVOKE, // member virtual call
 
         // LC = Load Const
         LCSI16,

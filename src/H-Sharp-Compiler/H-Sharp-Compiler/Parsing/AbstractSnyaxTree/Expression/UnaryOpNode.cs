@@ -1,7 +1,7 @@
 ﻿using HSharp.IO;
 
-namespace HSharp.Parsing.AbstractSnyaxTree {
-    public class UnaryOpNode : ASTNode {
+namespace HSharp.Parsing.AbstractSnyaxTree.Expression {
+    public class UnaryOpNode : ASTNode, IExpr {
 
         public ASTNode Expr { get; }
 

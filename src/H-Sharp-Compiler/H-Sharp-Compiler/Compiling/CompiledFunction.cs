@@ -4,7 +4,7 @@ using System.Text;
 
 namespace HSharp.Compiling {
     
-    public class CompiledFunction {
+    public sealed class CompiledFunction {
     
         public List<ByteInstruction> Instructions { get; set; }
 
@@ -14,6 +14,8 @@ namespace HSharp.Compiling {
             this.Name = name;
             this.Instructions = new List<ByteInstruction>();
         }
+
+        public override string ToString() => this.Name;
 
     }
 

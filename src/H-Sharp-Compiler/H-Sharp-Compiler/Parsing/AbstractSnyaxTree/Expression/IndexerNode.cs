@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using HSharp.IO;
 
-namespace HSharp.Parsing.AbstractSnyaxTree {
+namespace HSharp.Parsing.AbstractSnyaxTree.Expression {
     
     public class IndexerNode : ASTNode, IGroupedASTNode {
 

@@ -8,6 +8,8 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
         public string Content { get; }
 
+        public string NodeType => this.GetType().Name;
+
         public LexTokenType LexicalType { get; }
 
         public ASTNode(SourcePosition position, string content, LexTokenType tokenType) {

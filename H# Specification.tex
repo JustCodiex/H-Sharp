@@ -226,6 +226,7 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	
 	\gtext{VarDecl} ::= $TypeId$ $Id$ \glit{=} $Expr$ | $StorageMod$ $TypeId$ $Id$ \glit{=} $Expr$
 	\alt \glit{var} $Id$ \glit{=} $Expr$ | $StorageMod$ \glit{var} $Id$ \glit{=} $Expr$
+	\alt $TypeId$ $Id$ | $StorageMod$ $TypeId$ $Id$
 	\alt $LambdaType$ $Id$ \glit{=>} $LambdaExpr$
 
 	\gtext{FuncDecl} ::=  $Id$\glit{(}$Param$\glit{):} $TypeId$ $Scope$ % Const-unassignable

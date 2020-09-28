@@ -1,8 +1,8 @@
 ﻿using HSharp.IO;
 
-namespace HSharp.Parsing.AbstractSnyaxTree {
+namespace HSharp.Parsing.AbstractSnyaxTree.Expression {
     
-    public class BinOpNode : ASTNode {
+    public class BinOpNode : ASTNode, IExpr {
 
         public ASTNode Left { get; }
 

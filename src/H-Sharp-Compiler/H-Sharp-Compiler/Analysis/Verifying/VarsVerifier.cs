@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using HSharp.Parsing.AbstractSnyaxTree;
+using HSharp.Parsing.AbstractSnyaxTree.Declaration;
+using HSharp.Parsing.AbstractSnyaxTree.Expression;
+using HSharp.Parsing.AbstractSnyaxTree.Literal;
 using HSharp.Util;
 
 namespace HSharp.Analysis.Verifying {
@@ -21,7 +25,10 @@ namespace HSharp.Analysis.Verifying {
 
                 // check node type etc... for declarations and other scopes...
 
-                VarsNode(node, vScope);
+                CompileResult result = VarsNode(node, vScope);
+                if (!result) {
+                    return result;
+                }
 
             }
 
@@ -32,6 +39,15 @@ namespace HSharp.Analysis.Verifying {
         private CompileResult VarsNode(ASTNode node, VarScope scope) {
 
             switch (node) {
+                case FuncDeclNode funcDeclNode:
+                    VarScope funcScope = new VarScope();
+                    foreach (ParamsNode.ParameterNode param in funcDeclNode.Params.Parameters) {
+                        param.Identifier.Index = funcScope.Enter(param.Identifier.Content);
+                    }
+                    this.VarsNode(funcDeclNode.Body, funcScope);
+                    funcDeclNode.Body.VarIndices = funcDeclNode.Body.VarIndices.Union(this.Exit(new VarScope(), funcScope)).ToArray();
+                    scope.Enter(funcDeclNode.Name);
+                    break;
                 case ScopeNode scopeNode:
                     VarScope subScope = new VarScope(scope);
                     foreach(ASTNode subNode in scopeNode.Nodes) {
@@ -45,7 +61,7 @@ namespace HSharp.Analysis.Verifying {
                         this.VarsNode(subNode, scope);
                     }
                     break;
-                case VarDeclNode vDeclNode:
+                case VarDeclNode vDeclNode: // TODO: Make it an error such that two variables of the same name may not be declared in the same scope
                     this.VarsNode(vDeclNode.AssignToExpr, scope);
                     vDeclNode.EnterIndex = scope.Enter(vDeclNode.VarName);
                     break;
@@ -54,7 +70,20 @@ namespace HSharp.Analysis.Verifying {
                     this.VarsNode(binopNode.Right, scope);
                     break;
                 case IdentifierNode iDNode:
-                    iDNode.Index = scope.Lookup(iDNode.Content);
+                    if (scope.Lookup(iDNode.Content, out ushort idIndex)) {
+                        iDNode.Index = idIndex;
+                    } else {
+                        return new CompileResult(false, $"Variable '{iDNode.Content}' does not exist").SetOrigin(iDNode.Pos);
+                    }
+                    break;
+                case CallNode callNode:
+                    this.VarsNode(callNode.IdentifierNode, scope);
+                    foreach(ASTNode arg in callNode.Arguments.Arguments) {
+                        this.VarsNode(arg, scope);
+                    }
+                    if (callNode.IdentifierNode is IdentifierNode callIdNode) {
+                        callIdNode.IsFuncIdentifier = true;
+                    } // else ...
                     break;
                 case IntLitNode:
                     break;
