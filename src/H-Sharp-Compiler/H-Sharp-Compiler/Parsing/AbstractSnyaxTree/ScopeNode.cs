@@ -9,8 +9,11 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
         public List<ASTNode> Nodes => this.m_nodes;
 
-        public ScopeNode(SourcePosition position) : base(position, "{}", LexTokenType.None) {
+        public ushort[] VarIndices { get; set; }
 
+        public ScopeNode(SourcePosition position) : base(position, "{}", LexTokenType.None) {
+            this.VarIndices = new ushort[0];
+            this.m_nodes = new List<ASTNode>();
         }
 
         public void SetNodes(List<ASTNode> nodes) => this.m_nodes = nodes;

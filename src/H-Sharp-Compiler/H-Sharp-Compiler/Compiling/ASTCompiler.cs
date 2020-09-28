@@ -97,7 +97,7 @@ namespace HSharp.Compiling {
             List<ByteInstruction> instructions = node switch
             {
                 IntLitNode intLitNode => this.CompileConstant(intLitNode),
-                IdentifierNode idNode => Instruction(new ByteInstruction(Bytecode.PUSH, context.Lookup(idNode.Content))),
+                IdentifierNode idNode => Instruction(new ByteInstruction(Bytecode.PUSH, idNode.Index)),
                 BinOpNode binOpNode => this.CompileBinaryOperation(binOpNode, context),
                 VarDeclNode vDeclNode => this.CompileVariableDeclaration(vDeclNode, context),
                 ScopeNode scopeNode => this.CompileScope(scopeNode, context),
@@ -134,7 +134,7 @@ namespace HSharp.Compiling {
             if (!context.Result) {
                 return null;
             }
-            instructions.Add(new ByteInstruction(Bytecode.ENTER, context.Enter(decl.VarName)));
+            instructions.Add(new ByteInstruction(Bytecode.ENTER, decl.EnterIndex));
             return instructions;
         }
 
@@ -158,8 +158,9 @@ namespace HSharp.Compiling {
                     return null;
                 }
             }
-            // foreach variable introdced in scope
-                // exit scope
+            foreach (ushort u in node.VarIndices) {
+                instructions.Add(new ByteInstruction(Bytecode.EXIT, u));
+            }
             return instructions;
         }
 

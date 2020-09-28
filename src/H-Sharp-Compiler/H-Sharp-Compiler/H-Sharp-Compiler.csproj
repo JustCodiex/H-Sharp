@@ -12,8 +12,4 @@
     <OutputPath>E:\H#\bin\</OutputPath>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Folder Include="Util\" />
-  </ItemGroup>
-
 </Project>
