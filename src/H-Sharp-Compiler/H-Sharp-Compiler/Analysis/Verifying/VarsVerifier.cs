@@ -5,6 +5,7 @@ using HSharp.Parsing.AbstractSnyaxTree;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
 using HSharp.Parsing.AbstractSnyaxTree.Literal;
+using HSharp.Parsing.AbstractSnyaxTree.Statement;
 using HSharp.Util;
 
 namespace HSharp.Analysis.Verifying {
@@ -48,6 +49,15 @@ namespace HSharp.Analysis.Verifying {
                     funcDeclNode.Body.VarIndices = funcDeclNode.Body.VarIndices.Union(this.Exit(new VarScope(), funcScope)).ToArray();
                     scope.Enter(funcDeclNode.Name);
                     break;
+                case ClassDeclNode classDeclNode:
+                    VarScope classScope = new VarScope();
+                    foreach (FuncDeclNode methodDecl in classDeclNode.Methods) {
+                        var varsfunc = this.VarsNode(methodDecl, classScope);
+                        if (!varsfunc) {
+                            return varsfunc;
+                        }
+                    }
+                    break;
                 case ScopeNode scopeNode:
                     VarScope subScope = new VarScope(scope);
                     foreach(ASTNode subNode in scopeNode.Nodes) {
@@ -85,6 +95,18 @@ namespace HSharp.Analysis.Verifying {
                         callIdNode.IsFuncIdentifier = true;
                     } // else ...
                     break;
+                case MemberAccessNode memberAccessNode:
+                    this.VarsNode(memberAccessNode.Left as ASTNode, scope);
+                    break;
+                case NewObjectNode newObjNode:
+                    foreach (ASTNode arg in newObjNode.CtorArguments.Arguments) {
+                        this.VarsNode(arg, scope);
+                    }
+                    break;
+                case ReturnStatement returnStatementNode:
+                    this.VarsNode(returnStatementNode.Expression as ASTNode, scope);
+                    break;
+                case ThisNode:
                 case IntLitNode:
                     break;
                 default:

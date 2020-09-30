@@ -29,6 +29,7 @@ namespace HSharp.Compiling {
                     int => sizeof(int),
                     uint => sizeof(uint),
                     byte => sizeof(byte),
+                    string s => s.Length * sizeof(char),
                     _ => throw new NotSupportedException()
                 };
             }

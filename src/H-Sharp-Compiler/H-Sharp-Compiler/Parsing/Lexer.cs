@@ -39,7 +39,12 @@ namespace HSharp.Parsing {
             "final",
             "true",
             "false",
-            "null"
+            "null",
+            "return",
+            "break",
+            "new",
+            "this",
+            "base",
         };
 
         static string[] operators = new string[] {

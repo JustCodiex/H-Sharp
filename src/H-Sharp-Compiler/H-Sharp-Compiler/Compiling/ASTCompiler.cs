@@ -1,13 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 using HSharp.IO;
 using HSharp.Parsing.AbstractSnyaxTree;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
 using HSharp.Parsing.AbstractSnyaxTree.Literal;
-using System.Linq;
+using HSharp.Parsing.AbstractSnyaxTree.Statement;
 
 namespace HSharp.Compiling {
 
@@ -77,7 +77,7 @@ namespace HSharp.Compiling {
             CompileContext context = new CompileContext();
             foreach (ASTNode node in unit) {
 
-                if (node is IDecl decl) {
+                if (node is IDecl decl && node is not VarDeclNode) {
 
                     compiledInstructions.AddRange(this.CompileDeclaration(decl, context));
                     if (!context.Result) {
@@ -155,6 +155,7 @@ namespace HSharp.Compiling {
         private List<ByteInstruction> CompileNode(ASTNode node, CompileContext context) {
             List<ByteInstruction> instructions = node switch
             {
+                ThisNode => Instruction(new ByteInstruction(Bytecode.PUSH, 0)),
                 IntLitNode intLitNode => this.CompileConstant(intLitNode),
                 IdentifierNode idNode => Instruction(new ByteInstruction(idNode.IsFuncIdentifier ? Bytecode.PUSHCLOSURE : Bytecode.PUSH, idNode.Index)),
                 BinOpNode binOpNode => this.CompileBinaryOperation(binOpNode, context),
@@ -162,7 +163,10 @@ namespace HSharp.Compiling {
                 CallNode callNode => this.CompileCallExpression(callNode, context),
                 ScopeNode scopeNode => this.CompileScope(scopeNode, context),
                 ExpressionNode groupNode => this.CompileGroupedExpression(groupNode, context),
-                _ => null,
+                MemberAccessNode accessNode => this.CompileMemberAccessNode(accessNode, context),
+                ReturnStatement returnNode => this.CompileNode(returnNode.Expression as ASTNode, context),
+                NewObjectNode newObjNode => this.CompileNewObject(newObjNode, context),
+                _ => throw new NotImplementedException(),
             };
             return instructions;
         }
@@ -251,6 +255,33 @@ namespace HSharp.Compiling {
             instructions.Add(new ByteInstruction(Bytecode.CALL, (byte)node.Arguments.Count));
             return instructions;
         }
+
+        private List<ByteInstruction> CompileMemberAccessNode(MemberAccessNode node, CompileContext context) {
+            List<ByteInstruction> instructions = new List<ByteInstruction>();
+            instructions.AddRange(this.CompileNode(node.Left as ASTNode, context));
+            if (!context.Result) {
+                return null;
+            }
+            // load member
+            return instructions;
+        }
+
+        private List<ByteInstruction> CompileNewObject(NewObjectNode node, CompileContext context) {
+            List<ByteInstruction> instructions = new List<ByteInstruction>();
+            string t = node.Type.ToString();
+            if (!t.StartsWith("global.")) {
+                t = $"global.{t}";
+            }
+            for (int i = 0; i < node.CtorArguments.Count; i++) {
+                instructions.AddRange(this.CompileNode(node.CtorArguments[i], context));
+                if (!context.Result) {
+                    return null;
+                }
+            }
+            instructions.Add(new ByteInstruction(Bytecode.NEW, t));
+            return instructions;
+        }
+
 
     }
 

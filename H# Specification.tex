@@ -130,6 +130,7 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt $Expr$ \glit{?} $Expr$ \glit{:} $Expr$
 	\alt $Id$ | $Name$ | \glit{this} | \glit{base}
 	\alt $Expr$\glit{(}$Argument$\glit{)}
+	\alt \glit{new} $TypeId$\glit{(}$Argument$\glit{)} | \glit{new} $TypeId$\glit{[}$Argument$\glit{]}
 	\alt $Expr$\glit{.}$Id$ | $Expr$\glit{?.}$Id$ 
 	\alt $Expr$\glit{.}$Id$\glit{(}$Argument$\glit{)} | $Expr$\glit{?.}$Id$\glit{(}$Argument$\glit{)}
 	\alt $Expr$ \glit{is} $TypeID$ | $Expr$ \glit{is null} $Expr$ \glit{is} $TypeID$ $Id$
@@ -138,13 +139,14 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt $Expr$ \glit{is not} $TypeID$ $Id$ \glit{where} $Expr$ % if type and condition is false
 	\alt $Expr$ \glit{as} $TypeId$
 	\alt \glit{(}$TypeID$\glit{)} $Expr$
+	\alt \glit{sizeof($TypeId$}\glit{)} | \glit{addressof($Id$}\glit{)} | \glit{typeof($Expr$}\glit{)}
 	\alt $Assignment$
 	\alt $Literal$
 	
 	\gtext{LambdaExpr} ::= \glit{(}$Param$\glit{) =>} $Expr$
 	
 	\gtext{Directive} ::= \glit{type} $Id$ \glit{=} $TypeId$\glit{;}
-	\alt \glit{using} $Id$\glit{;} | \glit{using} $TypeId$ \glit{from} $Id$\glit{;}
+	\alt \glit{using} $Name$\glit{;} | \glit{using} $TypeId$ \glit{from} $Name$\glit{;}
 
 	\gtext{Statement} ::= $Assignment$\glit{;} | $ControlStatement$ | $MatchStatement$\glit{;}
 	\alt $TryCatchStatement$
@@ -167,11 +169,21 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\gtext{MatchStatement} ::= $Expr$ \glit{match \{} $MatchCase$ \glit{\}} 
 	
 	\gtext{MatchCase} ::= $MatchCase$\glit{,} $MatchCase$
-	\alt \glit{case} $Literal$ \glit{=>} $Expr$ | \glit{case} $Literal$ \glit{=>} $Scope$
-	\alt \glit{case} \glit{_} \glit{=>} $Expr$ | \glit{case} \glit{_} \glit{=>} $Scope$
+	\alt \glit{case} $Literal$ \glit{=>} $Expr$ | \glit{case} $TypeId$ \glit{=>} $Expr$ 
+	\alt \glit{case} $TypeId$ $Id$ \glit{=>} $Expr$ | \glit{case} $TypeId$ $Id$ \glit{when} $Expr$ \glit{=>} $Expr$ 
+	\alt \glit{case (}$MatchCaseId$\glit{) =>} $Expr$
+	\alt \glit{case (}$MatchCaseId$\glit{) when} $Expr$ \glit{=>} $Expr$ 
+	\alt \glit{case} $TypeId$ \glit{(}$MatchCaseId$\glit{) =>} $Expr$
+	\alt \glit{case} $TypeId$ \glit{(}$MatchCaseId$\glit{) when} $Expr$ \glit{=>} $Expr$ 
+	\alt \glit{case} \glit{_} \glit{=>} $Expr$
+	
+	\gtext{MatchCaseId} ::= $MatchCaseId$\glit{,} $MatchCaseId$
+	\alt $Id$ | \glit{_}
 
-	\gtext{TryCatchStatement} ::= \glit{try} $Scope$ \glit{catch} $TypeId$ $Id$ $Scope$  
-	\alt \glit{try} $Scope$ \glit{catch} $TypeId$ $Id$ $Scope$ \glit{finally} $Scope$
+	\gtext{TryCatchStatement} ::= \glit{try} $Scope$ \glit{catch} \glit{(}$TypeId$ $Id$\glit{)} $Scope$
+	\alt \glit{try} $Scope$ \glit{catch} \glit{(}$TypeId$ $Id$\glit{) when} $Expr$ $Scope$  
+	\alt \glit{try} $Scope$ \glit{catch} \glit{(}$TypeId$ $Id$\glit{)} $Scope$ \glit{finally} $Scope$
+	\alt \glit{try} $Scope$ \glit{catch} \glit{(}$TypeId$ $Id$\glit{) when} $Expr$ $Scope$ \glit{finally} $Scope$
 
 	\gtext{Assignment} ::= $Id$ \glit{=} $Expr$
 	\alt $Id$ \glit{+=} $Expr$ | $Id$ \glit{-=} $Expr$
@@ -180,14 +192,9 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt $Id$ \glit{\%=} $Expr$
 	
 	\gtext{Declaration} ::=  $NamespaceDecl$
-	\alt $VarDecl$
-	\alt $FuncDecl$
-	\alt $ClassDecl$
-	\alt $StaticClassDecl$
-	\alt $InterfaceDecl$
-	\alt $UnionDecl$
-	\alt $EnumDecl$
-	\alt $StructDecl$
+	\alt $VarDecl$ | $FuncDecl$ % Variable declaration
+	\alt $ClassDecl$ | $StaticClassDecl$ |  $InterfaceDecl$ % Ref types
+	\alt $UnionDecl$ | $EnumDecl$ | $StructDecl$ % Value types
 	
 	\gtext{NamespaceDecl} ::= \glit{namespace} $Name$ $Scope$
 	
@@ -215,9 +222,10 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt $AccessMod$ \glit{object} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
 	
 	\gtext{InterfaceDecl} ::= \glit{interface} $Id$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt $AccessMod$ \glit{interface} $Id$ \glit{\{} $ClassMembe$ \glit{\}}
+	\alt $AccessMod$ \glit{interface} $Id$ \glit{\{} $ClassMember$ \glit{\}}
 	
 	\gtext{ClassMember} ::= $ClassMember$ $ClassMember$
+	\alt $Id$\glit{(}$Param$\glit{)} $FuncBody$ | $AcessMod$ $Id$\glit{(}$Param$\glit{)} $FuncBody$ %ctor
 	\alt $VarDecl$\glit{;} | $AcessMod$ $VarDecl$\glit{;}
 	\alt $FuncDecl$ | $ClassDecl$ | $UnionDecl$ | $EnumDecl$
 	\alt \glit{event} $TypeId$ $id$\glit{;} | $AccessMod$ \glit{event} $TypeId$ $id$\glit{;}
@@ -227,13 +235,19 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\gtext{VarDecl} ::= $TypeId$ $Id$ \glit{=} $Expr$ | $StorageMod$ $TypeId$ $Id$ \glit{=} $Expr$
 	\alt \glit{var} $Id$ \glit{=} $Expr$ | $StorageMod$ \glit{var} $Id$ \glit{=} $Expr$
 	\alt $TypeId$ $Id$ | $StorageMod$ $TypeId$ $Id$
-	\alt $LambdaType$ $Id$ \glit{=>} $LambdaExpr$
+	\alt $LambdaType$ $Id$ \glit{=} $LambdaExpr$
+	\alt $TupleDecl$
 
-	\gtext{FuncDecl} ::=  $Id$\glit{(}$Param$\glit{):} $TypeId$ $Scope$ % Const-unassignable
-	\alt $AccessMod$ $Id$\glit{(}$Param$\glit{):} $TypeId$ $Scope$ % Const-unassignable
-	\alt $Id$ \glit{= (}$Param$\glit{):} $TypeId$ $Scope$  % Reassignable
-	\alt $AccessMod$ $Id$ \glit{= (}$Param$\glit{):} $TypeId$ $Scope$  % Reassignable
-	\alt $AccessMod$ \glit{const} $Id$ \glit{= (}$Param$\glit{):} $TypeId$ $Scope$  % Reassignable
+	\gtext{TupleDecl} ::= \glit{(}$ParamType$\glit{)} $Id$ \glit{=} \glit{(}$Argument$\glit{)}
+	\alt \glit{(}$Param$\glit{)} \glit{=} \glit{(}$Argument$\glit{)}
+
+	\gtext{FuncDecl} ::=  $Id$\glit{(}$Param$\glit{):} $TypeId$ $FuncBody$ % Const-unassignable
+	\alt $AccessMod$ $Id$\glit{(}$Param$\glit{):} $TypeId$ $FuncBody$ % Const-unassignable
+	\alt $Id$ \glit{= (}$Param$\glit{):} $TypeId$ $FuncBody$  % Reassignable
+	\alt $AccessMod$ $Id$ \glit{= (}$Param$\glit{):} $TypeId$ $FuncBody$  % Reassignable
+	\alt $AccessMod$ \glit{const} $Id$ \glit{= (}$Param$\glit{):} $TypeId$ $FuncBody$  % Reassignable
+	
+	\gtext{FuncBody} ::= $Scope$ | \glit{=>} $Expr$
 	
 	\gtext{UnionDecl} ::= \glit{union} $Id$ \glit{\{} $UnionMember$ \glit{\}}
 	\alt $AccessMod$ \glit{union} $Id$ \glit{\{} $UnionMember$ \glit{\}}
@@ -252,25 +266,25 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\gtext{EnumMember} ::=  $EnumMember$\glit{,} $EnumMember$
 	\alt $Id$ | $Id$ \glit{=} $LiteralNoNull$
 	
-	\gtext{StorageMod} ::= \glit{const} | \glit{static} | \glit{abstract} | \glit{override} | \glit{virtual} | \glit{final} | \glit{lazy}
+	\gtext{StorageMod} ::= \glit{const} | \glit{constexpr} | \glit{static} | \glit{abstract} | \glit{override} | \glit{virtual} | \glit{final} | \glit{lazy}
 	
 	\gtext{AccessMod} ::= \glit{public} | \glit{private} | \glit{protected} | \glit{internal} | \glit{external}
 	
-	\gtext{Param} ::= $Param$\glit{,} $Param$ 
+	\gtext{Param} ::= $Param$\glit{,} $Param$
 	\alt $TypeId$ $Id$ | \glit{const} $TypeId$ $Id$
-	\alt $LambdaType$ $Id$
+	\alt $ParamType$ $Id$
 	
+	\gtext{ParamType} ::= $TypeId$ | $TypeId$\glit{,} $TypeId$
+
 	\gtext{Argument} ::= $Expr$ | $Expr$\glit{,} $Expr$
 	
 	\gtext{Name} ::= $Id$ | $Name$\glit{.}$Name$	
 	
 	\newpage	
 	
-	\gtext{LambdaType} ::= \glit{(}$LambdaParamType$\glit{):} $TypeId$
+	\gtext{LambdaType} ::= \glit{(}$ParamType$\glit{):} $TypeId$
 	\alt $TypeId$ \glit{:} $TypeId$
 	
-	\gtext{LambdaParamType} ::= $TypeId$ | $TypeId$\glit{,} $TypeId$
-
 	\gtext{BinaryOp} ::= \glit{+} | \glit{-} | \glit{*} | \glit{/} | \glit{\%} | \glit{\textless} | \glit{\textgreater} | \glit{\textless}= | \glit{\textgreater}= | \glit{==} | \glit{!=}
 	\alt \glit{\textbar\textbar} | $\&\&$ | \glit{\textbar} | $\&$ | \glit{\textless\textless} | \glit{\textgreater\textgreater} | \glit{=>} | \glit{::} | \glit{??} | \glit{..}
 	

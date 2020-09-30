@@ -29,6 +29,8 @@
         INVOKE, // member call
         VINVOKE, // member virtual call
 
+        NEW,
+
         // LC = Load Const
         LCSI16,
         LCSI32,

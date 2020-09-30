@@ -4,7 +4,9 @@ using System.Linq;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
 using HSharp.Parsing.AbstractSnyaxTree.Literal;
+using HSharp.Parsing.AbstractSnyaxTree.Statement;
 using HSharp.Util;
+using HSharp.Util.Functional;
 
 namespace HSharp.Parsing.AbstractSnyaxTree {
 
@@ -95,11 +97,13 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
         }
 
-        private void ApplyOrderOfOperations(List<ASTNode> nodes) {
+        private void ApplyOrderOfOperations(List<ASTNode> nodes) { // AKA operator presedence
 
             Type binOp = typeof(BinOpNode);
             Type unOp = typeof(UnaryOpNode);
+            Type memAccessOp = typeof(MemberAccessNode);
             (Type, string)[][] opTypes = new (Type, string)[][] {
+                new (Type, string)[] { (memAccessOp, ".") },
                 new (Type, string)[] { (binOp, "*"), (binOp, "/") },
                 new (Type, string)[] { (binOp, "&") },
                 new (Type, string)[] { (unOp, "++"), (unOp, "--") },
@@ -115,7 +119,9 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                 while (j < nodes.Count) {
                     if (nodes[j].LexicalType == LexTokenType.Operator && ops.Any(x => x.Item2 == nodes[j].Content)) {
                         var m = ops.First(x => x.Item2 == nodes[j].Content);
-                        if (m.Item1 == binOp && j - 1 >= 0 && j + 1 < nodes.Count) {
+                        bool pre = j - 1 >= 0;
+                        bool post = j + 1 < nodes.Count;
+                        if (m.Item1 == binOp && pre && post) {
                             BinOpNode binaryOperation = new BinOpNode(nodes[j].Pos, nodes[j - 1], nodes[j].Content, nodes[j + 1]);
                             this.ApplyOrderOfOperationsBinary(binaryOperation);
                             nodes[j - 1] = binaryOperation;
@@ -125,6 +131,14 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                         } else if (m.Item1 == unOp) {
                             throw new NotImplementedException();
                             //continue;
+                        } else if (m.Item1 == memAccessOp && pre && post && nodes[j - 1].Is<IdentifierNode>().Is<ThisNode>().Or<MemberAccessNode>() && nodes[j+1] is IdentifierNode accessId) {
+                            IExpr accessExpr = nodes[j - 1] as IExpr;
+                            nodes[j - 1] = new MemberAccessNode(accessExpr, accessId, m.Item2, nodes[j].Pos);
+                            nodes.RemoveAt(j + 1);
+                            nodes.RemoveAt(j);
+                            continue;
+                        } else {
+                            throw new NotImplementedException();
                         }
                     }
                     j++;
@@ -150,32 +164,59 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
             }
         }
 
-        private void ApplyGrammar(List<ASTNode> nodes) {
+        private void ApplyGrammar(List<ASTNode> nodes, params Func<List<ASTNode>, int, bool>[] additionalPatterns) {
 
             int i = 0;
             while (i < nodes.Count) {
 
-                if (nodes[i].LexicalType == LexTokenType.Keyword) {
-                    if (nodes[i].Content.CompareTo("class") == 0) {
-                        this.ApplyClassGrammar(nodes, i);
+                if (additionalPatterns != null) {
+                    bool skipStandard = false;
+                    for (int j = 0; j < additionalPatterns.Length; j++) {
+                        if (additionalPatterns[j](nodes, i)) {
+                            skipStandard = true;
+                            break;
+                        }
                     }
-                } else if (TypeSequence<ASTNode, IdentifierNode, IdentifierNode, SeperatorNode>.Match(nodes, i)) {
+                    if (skipStandard) {
+                        i++;
+                        continue;
+                    }
+                }
+
+                if (nodes[i].LexicalType == LexTokenType.Keyword) {
+                    switch (nodes[i].Content) {
+                        case "class":
+                            this.ApplyClassGrammar(nodes, i);
+                            break;
+                        case "return":
+                            this.ApplyReturnStatementGrammar(nodes, i);
+                            break;
+                        default:
+                            throw new NotImplementedException();
+                    }
+                } else if (TypeSequence<ASTNode, IdentifierNode, IdentifierNode, SeperatorNode>.Match(nodes, i)) { // int x;
                     nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i], nodes[i+1].Content);
                     nodes.RemoveRange(i + 1, 2);
-                } else if (TypeSequence<ASTNode, IdentifierNode, BinOpNode, SeperatorNode>.Match(nodes, i)) {
+                } else if (TypeSequence<ASTNode, IdentifierNode, BinOpNode, SeperatorNode>.Match(nodes, i)) { // int x = <expr>;
                     BinOpNode assignOp = nodes[i + 1] as BinOpNode;
                     if (assignOp.Op.CompareTo("=") == 0) {
                         this.ApplyGrammarBinary(assignOp);
                         nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i], assignOp);
                         nodes.RemoveRange(i + 1, 2);
                     }
+                } else if (TypeSequence<ASTNode, IdentifierNode, BinOpNode, IdentifierNode, ExpressionNode, SeperatorNode>.Match(nodes, i)) {
+                    BinOpNode assignOp = nodes[i + 1] as BinOpNode;
+                    if (assignOp.Right.LexicalType == LexTokenType.Keyword && assignOp.Right.Is("new")) { // Klass k = new Klass();
+                        NewObjectNode newObjectNode = new NewObjectNode(new TypeIdentifierNode(nodes[i + 2] as IdentifierNode), nodes[i + 3] as ExpressionNode, assignOp.Right.Pos);
+                        nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i], new BinOpNode(assignOp.Pos, assignOp.Left, "=", newObjectNode));
+                        nodes.RemoveRange(i + 1, 4);
+                    } // else error?
                 } else if (TypeSequence<ASTNode, IdentifierNode, ExpressionNode, ASTNode, IdentifierNode, ScopeNode>.Match(nodes, i)) {
                     if (nodes[i + 2].Content.CompareTo(":") == 0) {
                         FuncDeclNode funcDecl = new FuncDeclNode(nodes[i].Content, nodes[i].Pos) {
                             Body = nodes[i + 4] as ScopeNode,
                             Return = nodes[i + 3],
                             Params = new ParamsNode(nodes[i + 1] as ExpressionNode) // Note: This constructor will apply the grammar rule on its own
-                            // Possibly not the best design ^^
                         };
                         if (!funcDecl.Params.IsValid) {
                             throw new Exception();
@@ -184,12 +225,11 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                         nodes.RemoveRange(i + 1, 4);
                         nodes[i] = funcDecl;
                     }
-                } else if (TypeSequence<ASTNode, IdentifierNode, ExpressionNode>.Match(nodes, i)) {
+                } else if (TypeSequence<ASTNode, IExpr, ExpressionNode>.Match(nodes, i)) {
                     ExpressionNode groupNode = nodes[i + 1] as ExpressionNode;
-                    this.ApplyGrammar(groupNode.Nodes);
+                    this.ApplyGrammar(groupNode.Nodes); // apply grammar on arguments ==> should lead to a nice arg1,arg2,arg3 setup (otherwise error)
                     CallNode callNode = new CallNode(nodes[i], nodes[i].Pos) {
                         Arguments = new ArgumentsNode(groupNode) // Note: This constructor will apply the grammar rule on its own
-                        // Possibly not the best design ^^
                     };
                     if (!callNode.Arguments.IsValid) {
                         throw new Exception();
@@ -223,12 +263,38 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
         private void ApplyClassGrammar(List<ASTNode> nodes, int from) {
 
+            string identifierName = string.Empty;
+
+            bool ClassCtorPattern(List<ASTNode> nodes, int from) { 
+                if(TypeSequence<ASTNode, IdentifierNode, ExpressionNode, ScopeNode>.Match(nodes, from)) {
+                    if (nodes[from].Content.CompareTo(identifierName) == 0) {
+                        ClassCtorDecl ctor = new ClassCtorDecl(identifierName, nodes[from].Pos) {
+                            Params = new ParamsNode(nodes[from+1] as ExpressionNode),
+                            Body = nodes[from+2] as ScopeNode
+                        };
+                        if (!ctor.Params.IsValid) {
+                            throw new Exception();
+                        }
+                        this.ApplyGrammar(ctor.Body.Nodes);
+                        nodes[from] = ctor;
+                        nodes.RemoveRange(from + 1, 2);
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            }
+
             if (TypeSequence<ASTNode, ASTNode, IdentifierNode, ScopeNode>.Match(nodes, from)) {
 
                 ClassDeclNode classDecl = new ClassDeclNode(nodes[from + 1].Content, nodes[from].Pos);
+                identifierName = classDecl.LocalClassName;
 
                 ScopeNode classBody = nodes[from + 2] as ScopeNode;
-                this.ApplyGrammar(classBody.Nodes);
+
+                this.ApplyGrammar(classBody.Nodes, ClassCtorPattern);
 
                 for (int i = 0; i < classBody.Size; i++) {
 
@@ -253,6 +319,36 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
         }
 
+        private void ApplyReturnStatementGrammar(List<ASTNode> nodes, int from) {
+
+            // List of elements "sandwiched" between return keyword and ';'
+            List<ASTNode> sandwichedElements = new List<ASTNode>();
+
+            // Loop until we find a seperator ';'
+            int i = from + 1;
+            while(!(nodes[i] is SeperatorNode && nodes[i].Is(";"))) {
+                sandwichedElements.Add(nodes[i]);
+                i++;
+            }
+
+            // Add seperator (Needed so we don't get syntax error)
+            sandwichedElements.Add(nodes[i]);
+
+            // Remove sandwiched elements
+            nodes.RemoveRange(from + 1, sandwichedElements.Count);
+
+            // Apply grammar on expression
+            this.ApplyGrammar(sandwichedElements);
+
+            // Set return statement (if possible - otherwise error)
+            if (sandwichedElements.Count == 1 && sandwichedElements[0] is IExpr expr) {
+                nodes[from] = new ReturnStatement(expr, nodes[0].Pos);
+            } else {
+                throw new Exception();
+            }
+
+        }
+
         private List<ASTNode> ParseTopLevel() {
 
             List<ASTNode> nodes = new List<ASTNode>();
@@ -269,7 +365,17 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                     case LexTokenType.Separator:
                         nodes.Add(new SeperatorNode(this.m_tokens[i].Content, this.m_tokens[i].Position));
                         break;
-                        // More easy-to-solve cases here
+                    case LexTokenType.Keyword:
+                        switch (this.m_tokens[i].Content) {
+                            case "this":
+                                nodes.Add(new ThisNode(this.m_tokens[i].Position));
+                                break;
+                            default:
+                                nodes.Add(new ASTNode(this.m_tokens[i].Position, this.m_tokens[i].Content, this.m_tokens[i].Type));
+                                break;
+                        }
+                        break;
+                    // More easy-to-solve cases here
                     default:
                         nodes.Add(new ASTNode(this.m_tokens[i].Position, this.m_tokens[i].Content, this.m_tokens[i].Type));
                         break;
@@ -288,15 +394,6 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
             } else {
                 doAction.Invoke();
             }
-        }
-
-        private bool Sequence(List<ASTNode> nodes, int from, params Type[] types) {
-            for (int i = from, j = 0; i < nodes.Count && j < types.Length; i++, j++) {
-                if (nodes[i].GetType() != types[j]) {
-                    return false;
-                }
-            }
-            return from + types.Length <= nodes.Count;
         }
 
         public AST Build() => new AST(new CompileUnitNode(this.m_topNodes));
