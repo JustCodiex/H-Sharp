@@ -147,7 +147,10 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	
 	\gtext{Directive} ::= \glit{type} $Id$ \glit{=} $TypeId$\glit{;}
 	\alt \glit{using} $Name$\glit{;} | \glit{using} $TypeId$ \glit{from} $Name$\glit{;}
+	\alt $NamespaceDecl$
 
+	\gtext{NamespaceDecl} ::= \glit{namespace} $Name$ $Scope$
+	
 	\gtext{Statement} ::= $Assignment$\glit{;} | $ControlStatement$ | $MatchStatement$\glit{;}
 	\alt $TryCatchStatement$
 	
@@ -191,12 +194,9 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt $Id$ \glit{\&=} $Expr$ | $Id$ \glit{|=} $Expr$
 	\alt $Id$ \glit{\%=} $Expr$
 	
-	\gtext{Declaration} ::=  $NamespaceDecl$
-	\alt $VarDecl$ | $FuncDecl$ % Variable declaration
+	\gtext{Declaration} ::=  $VarDecl$ | $FuncDecl$ % Variable declaration
 	\alt $ClassDecl$ | $StaticClassDecl$ |  $InterfaceDecl$ % Ref types
 	\alt $UnionDecl$ | $EnumDecl$ | $StructDecl$ % Value types
-	
-	\gtext{NamespaceDecl} ::= \glit{namespace} $Name$ $Scope$
 	
 	\gtext{ClassDecl} ::= \glit{class} $Id$ \glit{\{} $ClassMember$ \glit{\}}
 	\alt $AccessMod$ \glit{class} $Id$ \glit{\{} $ClassMember$ \glit{\}}
@@ -241,13 +241,16 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\gtext{TupleDecl} ::= \glit{(}$ParamType$\glit{)} $Id$ \glit{=} \glit{(}$Argument$\glit{)}
 	\alt \glit{(}$Param$\glit{)} \glit{=} \glit{(}$Argument$\glit{)}
 
-	\gtext{FuncDecl} ::=  $Id$\glit{(}$Param$\glit{):} $TypeId$ $FuncBody$ % Const-unassignable
-	\alt $AccessMod$ $Id$\glit{(}$Param$\glit{):} $TypeId$ $FuncBody$ % Const-unassignable
-	\alt $Id$ \glit{= (}$Param$\glit{):} $TypeId$ $FuncBody$  % Reassignable
-	\alt $AccessMod$ $Id$ \glit{= (}$Param$\glit{):} $TypeId$ $FuncBody$  % Reassignable
-	\alt $AccessMod$ \glit{const} $Id$ \glit{= (}$Param$\glit{):} $TypeId$ $FuncBody$  % Reassignable
+	\gtext{FuncDecl} ::=  $Id$\glit{(}$FuncParam$\glit{):} $TypeId$ $FuncBody$ % Const-unassignable
+	\alt $AccessMod$ $Id$\glit{(}$FuncParam$\glit{):} $TypeId$ $FuncBody$ % Const-unassignable
+	\alt $Id$ \glit{= (}$FuncParam$\glit{):} $TypeId$ $FuncBody$  % Reassignable
+	\alt $AccessMod$ $Id$ \glit{= (}$FuncParam$\glit{):} $TypeId$ $FuncBody$  % Reassignable
+	\alt $AccessMod$ \glit{const} $Id$ \glit{= (}$FuncParam$\glit{):} $TypeId$ $FuncBody$  % Reassignable
 	
 	\gtext{FuncBody} ::= $Scope$ | \glit{=>} $Expr$
+	
+	\gtext{FuncParam} ::= $FuncParam$\glit{,} $FuncParam$ | $Param$
+	\alt $TypeId$ $Id$ \glit{=} $Literal$	
 	
 	\gtext{UnionDecl} ::= \glit{union} $Id$ \glit{\{} $UnionMember$ \glit{\}}
 	\alt $AccessMod$ \glit{union} $Id$ \glit{\{} $UnionMember$ \glit{\}}

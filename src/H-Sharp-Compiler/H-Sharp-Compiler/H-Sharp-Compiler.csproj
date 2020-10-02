@@ -12,4 +12,8 @@
     <OutputPath>E:\H#\bin\</OutputPath>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Compiling\Linking\" />
+  </ItemGroup>
+
 </Project>

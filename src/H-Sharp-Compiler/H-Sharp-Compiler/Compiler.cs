@@ -1,4 +1,6 @@
 ﻿using System;
+using HSharp.Analysis;
+using HSharp.Analysis.Linking;
 using HSharp.Analysis.Verifying;
 using HSharp.Compiling;
 using HSharp.IO;
@@ -29,10 +31,25 @@ namespace HSharp {
                 }
             }
 
+            Domain globalDomain = Domain.GetGlobalDomain();
+            StaticTypeDetector statTypeDetector = new StaticTypeDetector(asts);
+
+            // Detect types
+            CompileResult result = statTypeDetector.Detect(globalDomain);
+            if (!result) {
+                return result;
+            }
+
+            // Define types
+            result = statTypeDetector.DefineAllTypes(globalDomain);
+            if (!result) {
+                return result;
+            }
+
             // TODO: Run static checks
 
             ASTCompiler astCompiler = new ASTCompiler(asts);
-            CompileResult result = astCompiler.Compile();
+            result = astCompiler.Compile();
             if (!result) {
                 Console.WriteLine("Failed to compile project. \n\tSome currently not-generated error");
                 return result;

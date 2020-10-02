@@ -15,9 +15,11 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
             public override string ToString() => $"{Type} {Identifier}";
         }
 
+        ParameterNode[] m_params;
+
         public bool IsValid { get; }
 
-        public ParameterNode[] Parameters { get; }
+        public ParameterNode[] Parameters => this.m_params;
 
         public int Count => this.Parameters.Length;
 
@@ -46,11 +48,11 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
             }
 
             // Alloc paremeter array
-            this.Parameters = new ParameterNode[paramCount];
+            this.m_params = new ParameterNode[paramCount];
 
             // Run though all params
             for (int i = 0, j = 0; i < source.Size; i += 3, j++) {
-                this.Parameters[j] = new ParameterNode(source[i], source[i + 1] as IdentifierNode, source[i].Pos);
+                this.m_params[j] = new ParameterNode(source[i], source[i + 1] as IdentifierNode, source[i].Pos);
             }
 
             this.IsValid = true;
@@ -58,6 +60,19 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
         }
 
         public IdentifierNode GetParameterId(int index) => this.Parameters[index].Identifier;
+
+        public void InsertParam(int pos, ParameterNode node) {
+            ParameterNode[] copy = new ParameterNode[this.Parameters.Length + 1];
+            for (int i = 0, j = 0; i < copy.Length; i++) {
+                if (i == pos) {
+                    copy[i] = node;
+                } else {
+                    copy[i] = this.m_params[j];
+                    j++;
+                }
+            }
+            this.m_params = copy;
+        }
 
         public override string ToString() => string.Join(",", (object[])this.Parameters);
 
