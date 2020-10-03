@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace HSharp.Analysis.TypeData {
-    public class StructType : HSharpType {
+    public class StructType : HSharpType, IValType {
 
         public override bool IsReferenceType => false;
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using HSharp.Analysis;
 using HSharp.Analysis.Linking;
+using HSharp.Analysis.Typechecking;
 using HSharp.Analysis.Verifying;
 using HSharp.Compiling;
 using HSharp.IO;
@@ -23,14 +24,6 @@ namespace HSharp {
                 asts[i] = ast;
             }
 
-            VarsVerifier vVerifier = new VarsVerifier();
-            for (int i = 0; i < asts.Length; i++) {
-                var varsResult = vVerifier.Vars(asts[i]);
-                if (!varsResult) {
-                    return varsResult;
-                }
-            }
-
             Domain globalDomain = Domain.GetGlobalDomain();
             StaticTypeDetector statTypeDetector = new StaticTypeDetector(asts);
 
@@ -46,7 +39,23 @@ namespace HSharp {
                 return result;
             }
 
+            Typechecker typechecker = new Typechecker();
+            for (int i = 0; i < asts.Length; i++) {
+                var varsResult = typechecker.Typecheck(asts[i], globalDomain);
+                if (!varsResult) {
+                    return varsResult;
+                }
+            }
+
             // TODO: Run static checks
+
+            VarsVerifier vVerifier = new VarsVerifier();
+            for (int i = 0; i < asts.Length; i++) {
+                var varsResult = vVerifier.Vars(asts[i]);
+                if (!varsResult) {
+                    return varsResult;
+                }
+            }
 
             ASTCompiler astCompiler = new ASTCompiler(asts);
             result = astCompiler.Compile();

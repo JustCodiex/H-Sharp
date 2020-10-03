@@ -3,5 +3,5 @@
 \contentsline {section}{Grammar}{2}{section*.4}%
 \contentsline {section}{Operational Semantics}{6}{section*.6}%
 \contentsline {section}{Type Semantics}{7}{section*.9}%
-\contentsline {section}{Compilation Semantics}{8}{section*.12}%
-\contentsline {section}{Bytecode Semantics}{9}{section*.14}%
+\contentsline {section}{Compilation Semantics}{8}{section*.13}%
+\contentsline {section}{Bytecode Semantics}{9}{section*.15}%

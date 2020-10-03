@@ -90,7 +90,10 @@
 %% Semantic commands
 \newcommand{\envall}{\rho, \mu, \phi, \kappa, \sigma \vdash}
 \newcommand{\envallm}[1]{\rho, \mu, \phi, \kappa, \sigma #1 \vdash}
-\newcommand{\rspace}{ \ \ \ }
+\newcommand{\typemodel}{\theta, \gamma, \eta \vdash}
+\newcommand{\typeis}[1]{\ \texttt{:} \ #1}
+\newcommand{\subtype}[2]{#1 \ \texttt{<:} \ #2}
+\newcommand{\rspace}{ \ \ \ \ \ }
 
 %% Grammar commands
 \newcommand{\gtext}[1]{<$#1$>}
@@ -343,22 +346,53 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 \newsection{Type Semantics}
 \begin{figure}[H]
 \centering
+\framebox{
+	\parbox[t][1.9 cm]{4.2 cm}{
+	\addvspace{-0.25cm}
+		\begin{align*}
+			\theta &=TypeEnv \\
+			\gamma &=TypeLookupEnv \\
+			\eta &=ReferenceTypeEnv
+		\end{align*}
+	}
+}
+\framebox{
+	\parbox[t][1.9cm]{4.2 cm}{
+	\addvspace{-0.25cm}
+		\begin{align*}
+			\theta, \gamma, \eta &\vdash Expr \ \texttt{:} \ Type \\
+			\theta, \gamma, \eta &\vdash Decl \ \texttt{:} \ \theta, \gamma \\
+			\theta, \gamma, \eta &\vdash Decl \ \texttt{:} \ \theta, \gamma, \eta
+		\end{align*}
+	}
+}
+\framebox{
+	\parbox[t][1.9cm]{4.2 cm}{
+	\addvspace{-0.25cm}
+		\begin{align*}
+			\subtype{\texttt{int}}{\subtype{\texttt{float}}{\subtype{\texttt{double}}{\texttt{INumeric}}}}  \\ 
+		\end{align*}
+	}
+}
+\end{figure}
+\begin{figure}[H]
+\centering
 	\begin{mathparpagebreakable}
-		\infer[VariableLookup]
-		{\envall \rho (x) = v \neq (\ell, \omega, \sigma)}
-		{\envall x \Rightarrow v, \sigma}
+		\infer[T-IntLit]
+		{i\in \mathbb{N}}
+		{\typemodel i \typeis{\texttt{int}} }
 		\and
-		\infer[HeapObjectLookup]
-		{\envall \rho (x) = (\ell, \omega, \sigma) \rspace \sigma(\ell)=v \rspace \omega = \texttt{O}}
-		{\envall x \Rightarrow v, \sigma}
+		\infer[T-Addition]
+		{\typemodel e_1 \ \texttt{:} \ \tau_1 \rspace \typemodel e_2 \ \texttt{:} \ \tau_2 \rspace \rspace \tau <: \texttt{INumeric}}
+		{\typemodel e_1 \ \texttt{+} \ e_2 \typeis{}}
 		\and
-		\infer[HeapStringLookup]
-		{\envall \rho (x) = (\ell, \omega, \sigma) \rspace \sigma(\ell)=v \rspace \omega = \texttt{S}}
-		{\envall x \Rightarrow v, \sigma}
+		\infer[T-DeclVar-NonRef]
+		{\typemodel e \ \texttt{:} \ \tau \rspace \tau \notin \eta \rspace \theta'=\theta[x \mapsto \tau'] \rspace \tau'=\texttt{typeof}(t,\gamma) \rspace \tau <: \tau'}
+		{\typemodel t \ x \ \texttt{=} \ e \typeis{\theta', \gamma, \eta}}
 		\and
-		\infer[HeapArrayLookup]
-		{\envall \rho (x) = (\ell, \omega, \sigma) \rspace \sigma(\ell)=v \rspace \omega = \texttt{A}}
-		{\envall x \Rightarrow v, \sigma}
+		\infer[T-DeclVar-Ref]
+		{\typemodel e \ \texttt{:} \ \tau \rspace \tau \in \eta \rspace \theta'=\theta[x \mapsto \texttt{Ref}(\tau')] \rspace \tau'=\texttt{typeof}(t,\gamma) \rspace \tau <: \tau'}
+		{\typemodel t \ x \ \texttt{=} \ e \typeis{\theta', \gamma, \eta}}
 		\and
 	\end{mathparpagebreakable}
 \end{figure}\noindent

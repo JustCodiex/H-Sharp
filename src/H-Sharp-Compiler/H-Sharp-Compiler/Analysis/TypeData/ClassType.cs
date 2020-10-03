@@ -5,7 +5,7 @@ using HSharp.Analysis.Linking;
 
 namespace HSharp.Analysis.TypeData {
 
-    public class ClassType : HSharpType {
+    public class ClassType : HSharpType, IRefType {
 
         public override bool IsReferenceType => true;
 
