@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using HSharp.Analysis.TypeData;
 using HSharp.Parsing.AbstractSnyaxTree;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
@@ -96,17 +95,25 @@ namespace HSharp.Analysis.Typechecking {
             }
 
             IValType outType = this.TypeOf(funcDecl.Return.ToString(), domain);
+            FunctionType funcType;
+            if (domain is ClassType klass) {
+                if (!klass.Methods.TryGetValue(funcDecl.Name, out funcType)) {
+                    // TODO: Something here
+                }
+            } else {
+                funcType = domain.Get<FunctionType>(funcDecl.Name);
+            }
 
             if (funcDecl is ClassCtorDecl) { // or is void method
 
-                return (new CompileResult(true), outType);
+                return (new CompileResult(true), funcType);
 
             } else {
 
                 if (!this.IsAllSubtypeOf(outType, bodyResult.Item2, out string err) && funcDecl is not ClassCtorDecl) {
                     return (new CompileResult(false, err), null);
                 } else {
-                    return (new CompileResult(true), outType);
+                    return (new CompileResult(true), funcType);
                 }
 
             }
@@ -321,7 +328,7 @@ namespace HSharp.Analysis.Typechecking {
             if (subType == baseType) {
                 return true;
             } else if (subType is ReferenceType subRefType && baseType is ReferenceType baseRefType) {
-                if (subRefType.Equals(baseType)) {
+                if (subRefType.Equals(baseRefType)) {
                     return true;
                 } else {
                     return false;

@@ -12,6 +12,8 @@ namespace HSharp.Analysis.TypeData {
 
         public List<HSharpType> ParameterTypes { get; }
 
+        public bool IsMethod => this.Owner is null;
+
         public override bool IsReferenceType => false;
 
         public override ushort Size => 0;
