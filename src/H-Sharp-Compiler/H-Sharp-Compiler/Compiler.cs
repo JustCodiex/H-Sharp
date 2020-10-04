@@ -39,19 +39,19 @@ namespace HSharp {
                 return result;
             }
 
-            Typechecker typechecker = new Typechecker();
-            for (int i = 0; i < asts.Length; i++) {
-                var varsResult = typechecker.Typecheck(asts[i], globalDomain);
-                if (!varsResult) {
-                    return varsResult;
-                }
-            }
-
             // TODO: Run static checks
 
             VarsVerifier vVerifier = new VarsVerifier();
             for (int i = 0; i < asts.Length; i++) {
                 var varsResult = vVerifier.Vars(asts[i]);
+                if (!varsResult) {
+                    return varsResult;
+                }
+            }
+
+            Typechecker typechecker = new Typechecker();
+            for (int i = 0; i < asts.Length; i++) {
+                var varsResult = typechecker.Typecheck(asts[i], globalDomain);
                 if (!varsResult) {
                     return varsResult;
                 }

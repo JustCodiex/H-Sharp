@@ -30,6 +30,8 @@ namespace HSharp.Analysis.Typechecking {
 
         public IValType Lookup(string x) => this.m_typeEnv[x];
 
+        public bool IsDefined(string x) => this.m_typeEnv.ContainsKey(x);
+
     }
 
 }

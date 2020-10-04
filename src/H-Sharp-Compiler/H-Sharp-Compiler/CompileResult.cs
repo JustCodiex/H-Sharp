@@ -1,4 +1,5 @@
 ﻿using HSharp.IO;
+using HSharp.Parsing.AbstractSnyaxTree;
 
 namespace HSharp {
     
@@ -20,6 +21,8 @@ namespace HSharp {
             this.Origin = position;
             return this;
         }
+
+        public CompileResult SetOrigin(ASTNode node) => this.SetOrigin(node.Pos);
 
         public override string ToString() => Success ? "Success" : $"Fatal Compile Error @ {this.Origin} - \"{this.Message}\"";
 

@@ -1,11 +1,10 @@
 ﻿using System.Collections.Generic;
-using HSharp.Analysis.TypeData;
 
-namespace HSharp.Analysis.Linking {
+namespace HSharp.Analysis.TypeData {
     
-    public class MethodSignature {
+    public class FunctionType : HSharpType, IValType {
     
-        public string Name { get; }
+        public override string Name { get; }
 
         public ClassType Owner { get; }
 
@@ -13,7 +12,11 @@ namespace HSharp.Analysis.Linking {
 
         public List<HSharpType> ParameterTypes { get; }
 
-        public MethodSignature(string methodname, ClassType owner, HSharpType returnType, List<HSharpType> parameters) {
+        public override bool IsReferenceType => false;
+
+        public override ushort Size => 0;
+
+        public FunctionType(string methodname, ClassType owner, HSharpType returnType, List<HSharpType> parameters) {
             this.Name = methodname;
             this.Owner = owner;
             this.ReturnType = returnType;

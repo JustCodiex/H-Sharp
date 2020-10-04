@@ -394,6 +394,10 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 		{\typemodel e \ \texttt{:} \ \tau \rspace \tau \in \eta \rspace \theta'=\theta[x \mapsto \texttt{Ref}(\tau')] \rspace \tau'=\texttt{typeof}(t,\gamma) \rspace \tau <: \tau'}
 		{\typemodel t \ x \ \texttt{=} \ e \typeis{\theta', \gamma, \eta}}
 		\and
+		\infer[T-NewObject]
+		{\tau = \gamma(t) \rspace \tau=() \rspace \typemodel e_1,\dots, e_n \typeis{\tau_1,\dots,\tau_n}}
+		{\typemodel \texttt{new} \ t \texttt{(} e_1,\dots,e_n \texttt{)} \typeis{\tau}}
+		\and
 	\end{mathparpagebreakable}
 \end{figure}\noindent
 \newpage

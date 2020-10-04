@@ -79,6 +79,7 @@ namespace HSharp.Analysis.Linking {
             return node switch
             {
                 ClassDeclNode classDecl => this.DefineClass(classDecl, domain),
+                FuncDeclNode funcDecl => this.DefineFunc(funcDecl, domain),
                 _ => new CompileResult(true)
             };
         }
@@ -110,7 +111,7 @@ namespace HSharp.Analysis.Linking {
 
                 foreach (FuncDeclNode method in classDeclNode.Methods) {
                     bool isCtor = method is ClassCtorDecl;
-                    var res = this.DefineMethod(method, klass, domain, out MethodSignature methodSignature);
+                    var res = this.DefineFunction(method, klass, domain, out FunctionType methodSignature);
                     if (!res) {
                         return res;
                     } else if (isCtor) {
@@ -127,7 +128,22 @@ namespace HSharp.Analysis.Linking {
             }
         }
 
-        private CompileResult DefineMethod(FuncDeclNode funcDeclNode, ClassType methodOwner, Domain domain, out MethodSignature signature) {
+        private CompileResult DefineFunc(FuncDeclNode func, Domain domain) {
+
+            CompileResult res = this.DefineFunction(func, null, domain, out FunctionType type);
+            if (!res) {
+                return res;
+            } else {
+
+                // Add to subdomain
+                domain.AddSubdomain(type);
+
+                return new CompileResult(true);
+            }
+
+        }
+
+        private CompileResult DefineFunction(FuncDeclNode funcDeclNode, ClassType methodOwner, Domain domain, out FunctionType signature) {
 
             signature = null;
 
@@ -140,7 +156,9 @@ namespace HSharp.Analysis.Linking {
 
             // add the "this" parameter
             SourcePosition pos = funcDeclNode.Pos; // Stor position for convenience
-            funcDeclNode.Params.InsertParam(0, new ParamsNode.ParameterNode(new TypeIdentifierNode(methodOwner.Name, pos), new IdentifierNode("this", pos), pos));
+            if (methodOwner is not null) {
+                funcDeclNode.Params.InsertParam(0, new ParamsNode.ParameterNode(new TypeIdentifierNode(methodOwner.Name, pos), new IdentifierNode("this", pos), pos));
+            }
 
             foreach (ParamsNode.ParameterNode node in funcDeclNode.Params.Parameters) {
                 if (domain.First<HSharpType>(node.Type.ToString()) is HSharpType paramType) {
@@ -150,7 +168,7 @@ namespace HSharp.Analysis.Linking {
                 }
             }
 
-            signature = new MethodSignature(funcDeclNode.Name, methodOwner, returnType, parameters);
+            signature = new FunctionType(funcDeclNode.Name, methodOwner, returnType, parameters);
             return new CompileResult(true);
 
         }

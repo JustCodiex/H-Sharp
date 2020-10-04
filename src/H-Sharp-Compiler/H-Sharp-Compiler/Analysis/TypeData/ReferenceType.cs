@@ -21,6 +21,16 @@ namespace HSharp.Analysis.TypeData {
 
         public override string ToString() => this.Name;
 
+        public override bool Equals(object obj) { 
+            if (obj is ReferenceType other) {
+                return this.ReferencedType == other.ReferencedType;
+            } else {
+                return false;
+            }
+        }
+
+        public override int GetHashCode() => base.GetHashCode();
+
     }
 
 }

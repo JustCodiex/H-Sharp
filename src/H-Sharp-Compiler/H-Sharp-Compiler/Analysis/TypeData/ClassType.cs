@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using HSharp.Analysis.Linking;
 
 namespace HSharp.Analysis.TypeData {
 
@@ -17,17 +16,29 @@ namespace HSharp.Analysis.TypeData {
 
         public Dictionary<string, ClassType> Classes { get; }
 
-        public Dictionary<string, MethodSignature> Methods { get; }
+        public Dictionary<string, FunctionType> Methods { get; }
 
-        public List<MethodSignature> Constructors { get; }
+        public List<FunctionType> Constructors { get; }
 
         public ClassType(string localClassName) {
             this.Name = localClassName;
-            this.Constructors = new List<MethodSignature>();
+            this.Constructors = new List<FunctionType>();
             this.Fields = new Dictionary<string, HSharpType>();
             this.Classes = new Dictionary<string, ClassType>();
-            this.Methods = new Dictionary<string, MethodSignature>();
+            this.Methods = new Dictionary<string, FunctionType>();
             this.m_subDomains = new List<Domain>();
+        }
+
+        public HSharpType FindMember(string membername) {
+
+            if (this.Fields.ContainsKey(membername)) {
+                return this.Fields[membername];
+            } else if (this.Methods.ContainsKey(membername)) {
+                return this.Methods[membername];
+            }
+
+            return null;
+
         }
 
     }

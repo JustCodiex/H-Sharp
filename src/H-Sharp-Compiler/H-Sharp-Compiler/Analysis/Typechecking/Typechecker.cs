@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using HSharp.Analysis.TypeData;
 using HSharp.Parsing.AbstractSnyaxTree;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
 using HSharp.Parsing.AbstractSnyaxTree.Literal;
-
+using HSharp.Parsing.AbstractSnyaxTree.Statement;
+using HSharp.Util.Functional;
 using ValueType = HSharp.Analysis.TypeData.ValueType;
 
 namespace HSharp.Analysis.Typechecking {
@@ -19,8 +21,8 @@ namespace HSharp.Analysis.Typechecking {
 
         public CompileResult Typecheck(AST ast, Domain globDomain) {
 
+            TypeEnvironment tenv = new TypeEnvironment();
             foreach (ASTNode node in ast.Root) {
-                TypeEnvironment tenv = new TypeEnvironment();
                 var res = this.TypecheckNode(node, tenv, globDomain).Item1;
                 if (!res) {
                     return res;
@@ -40,8 +42,13 @@ namespace HSharp.Analysis.Typechecking {
             MemberAccessNode memberAccess => this.TypecheckMemberAccessOperation(memberAccess, tenv, domain),
             IdentifierNode id => this.TypecheckIdentifierOperation(id, tenv, domain),
             ThisNode thisNode => this.TypecheckIdentifierOperation(thisNode, tenv, domain),
+            ReturnStatement returnStatement => this.TypecheckNode(returnStatement.Expression as ASTNode, tenv, domain),
+            NewObjectNode newObject => this.TypecheckNewOperation(newObject, tenv, domain),
+            CallNode callNode => this.TypecheckCallOperation(callNode, tenv, domain),
+            ScopeNode scope => this.TypecheckScope(scope, tenv, domain).Select(x => x, y => y[^1]),
+            ExpressionNode expr => this.TypecheckExpressionOperation(expr, tenv, domain),
             ILiteral lit => this.TypecheckConstOperation(lit, domain),
-            _ => (new CompileResult(true), null),
+            _ => (new CompileResult(false), null),
         };
 
         private (CompileResult, IValType) TypecheckClassDeclOperation(ClassDeclNode classDecl, TypeEnvironment tenv, Domain domain) {
@@ -82,17 +89,11 @@ namespace HSharp.Analysis.Typechecking {
                 funTypeEnv.MapsTo(param.Identifier.Content, this.TypeOf(param.Type.ToString(), domain));
             }
 
-            IValType finalType = null;
-            foreach (ASTNode bodyNode in funcDecl.Body.Nodes) {
-                (CompileResult result, IValType exprType) = this.TypecheckNode(bodyNode, funTypeEnv, domain);
-                if (!result) {
-                    return (result, exprType);
-                } else {
-                    finalType = exprType;
-                }
+            // Check scope
+            var bodyResult = this.TypecheckScope(funcDecl.Body, funTypeEnv, domain);
+            if (!bodyResult.Item1) {
+                return (bodyResult.Item1, null);
             }
-
-            // TODO: Second pass going through all control paths
 
             IValType outType = this.TypeOf(funcDecl.Return.ToString(), domain);
 
@@ -102,7 +103,7 @@ namespace HSharp.Analysis.Typechecking {
 
             } else {
 
-                if (!this.IsSubtype(finalType, outType, out string err) && funcDecl is not ClassCtorDecl) {
+                if (!this.IsAllSubtypeOf(outType, bodyResult.Item2, out string err) && funcDecl is not ClassCtorDecl) {
                     return (new CompileResult(false, err), null);
                 } else {
                     return (new CompileResult(true), outType);
@@ -182,9 +183,15 @@ namespace HSharp.Analysis.Typechecking {
 
         private (CompileResult, IValType) TypecheckIdentifierOperation(ASTNode idOp, TypeEnvironment tenv, Domain domain) {
 
-            IValType idType = tenv.Lookup(idOp.Content);
-
-            return (new CompileResult(true), idType);
+            if (tenv.IsDefined(idOp.Content)) {
+                return (new CompileResult(true), tenv.Lookup(idOp.Content));
+            } else {
+                if (domain.First<FunctionType>(idOp.Content) is FunctionType func) {
+                    return (new CompileResult(true), func);
+                } else {
+                    return (new CompileResult(false, $"Unknown identifier").SetOrigin(idOp), null);
+                }
+            }
 
         }
 
@@ -203,17 +210,105 @@ namespace HSharp.Analysis.Typechecking {
 
             if (left.Item2 is ReferenceType refType) {
                 if (refType.ReferencedType is ClassType refClassType) {
-                    if (refClassType.Fields.TryGetValue(memberAccess.Right.Content, out HSharpType classFieldType)) {
-                        return (new CompileResult(true), classFieldType is IRefType ? new ReferenceType(classFieldType) : classFieldType as IValType);
+                    if (refClassType.FindMember(memberAccess.Right.Content) is HSharpType refClassMember) {
+                        return (new CompileResult(true), refClassMember is IRefType ? new ReferenceType(refClassMember) : refClassMember as IValType);
                     } else {
                         return (new CompileResult(false, $"Class '{refClassType.Name}' has no member by name '{memberAccess.Right.Content}'.").SetOrigin(memberAccess.Pos), null);
                     }
                 }
             } else {
-
+                throw new NotImplementedException();
             }
 
             return (new CompileResult(false).SetOrigin(memberAccess.Pos), null);
+
+        }
+
+        private (CompileResult, IValType) TypecheckNewOperation(NewObjectNode newObject, TypeEnvironment tenv, Domain domain) {
+
+            IValType type = this.TypeOf(newObject.Type.ToString(), domain);
+            if (type is null) {
+                return (new CompileResult(false, $"Undefined type '{newObject.Type}'").SetOrigin(newObject), null);
+            }
+
+            foreach (ASTNode arg in newObject.CtorArguments.Arguments) {
+                var res = this.TypecheckNode(arg, tenv, domain);
+                if (!res.Item1) {
+                    return res;
+                }
+            }
+
+            return (new CompileResult(true), type);
+
+        }
+
+        private (CompileResult, IValType) TypecheckCallOperation(CallNode callNode, TypeEnvironment tenv, Domain domain) {
+
+            (CompileResult result, IValType callType) = this.TypecheckNode(callNode.IdentifierNode, tenv, domain);
+            if (!result) {
+                return (result, null);
+            }
+
+            if (callType is FunctionType func) {
+
+                foreach (ASTNode arg in callNode.Arguments.Arguments) {
+                    var res = this.TypecheckNode(arg, tenv, domain);
+                    if (!res.Item1) {
+                        return res;
+                    }
+                }
+
+                return (new CompileResult(true), func.ReturnType is IValType ? func.ReturnType as IValType : new ReferenceType(func.ReturnType) as IValType);
+
+            } else {
+                return (new CompileResult(false, $"Cannot invoke class member '{callNode.IdentifierNode}'").SetOrigin(callNode), null);
+            }
+
+        }
+
+        private (CompileResult, List<IValType>) TypecheckScope(ScopeNode scopeNode, TypeEnvironment tenv, Domain domain) {
+
+            List<IValType> results = new List<IValType>();
+            TypeEnvironment scopeEnv = new TypeEnvironment(tenv);
+
+            IValType last = null;
+            foreach (ASTNode node in scopeNode.Nodes) {
+                var res = this.TypecheckNode(node, scopeEnv, domain);
+                if (res.Item1) {
+                    if (node is ReturnStatement) {
+                        results.Add(res.Item2);
+                    } // TODO: Add more statements here that may yield retrn types
+                    last = res.Item2;
+                    if (last is null) {
+                        break;
+                    }
+                } else {
+                    return (res.Item1, null);
+                }
+            }
+
+            if ((results.Count > 0 && last != results[^1]) || results.Count == 0) {
+                results.Add(last);
+            }
+
+            return (new CompileResult(true), results);
+
+        }
+
+        private (CompileResult, IValType) TypecheckExpressionOperation(ExpressionNode scopeNode, TypeEnvironment tenv, Domain domain) {
+
+            IValType last = null;
+            foreach (ASTNode node in scopeNode.Nodes) {
+                var res = this.TypecheckNode(node, tenv, domain);
+                if (!res.Item1) {
+                    return (res.Item1, null);
+                } else {
+                    last = res.Item2;
+                }
+            }
+
+            return (new CompileResult(true), last);
+
 
         }
 
@@ -225,11 +320,27 @@ namespace HSharp.Analysis.Typechecking {
             err = string.Empty;
             if (subType == baseType) {
                 return true;
+            } else if (subType is ReferenceType subRefType && baseType is ReferenceType baseRefType) {
+                if (subRefType.Equals(baseType)) {
+                    return true;
+                } else {
+                    return false;
+                }
             } else {
                 // TODO: Check
-                err = $"Invalid type operand {subType}. Expected {baseType}";
+                err = $"Invalid type '{subType}' found. Expected  type '{baseType}'";
                 return false;
             }
+        }
+
+        private bool IsAllSubtypeOf(IValType baseType, List<IValType> valtypes, out string err) {
+            err = string.Empty;
+            for (int i = 0; i < valtypes.Count; i++) {
+                if (!this.IsSubtype(valtypes[i], baseType, out err)) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         private IValType TypeOf(string typeId, Domain domain) {
