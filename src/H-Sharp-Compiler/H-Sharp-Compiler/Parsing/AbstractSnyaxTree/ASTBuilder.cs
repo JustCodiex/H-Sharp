@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using HSharp.IO;
+using HSharp.Language;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
+using HSharp.Parsing.AbstractSnyaxTree.Directive;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
 using HSharp.Parsing.AbstractSnyaxTree.Literal;
 using HSharp.Parsing.AbstractSnyaxTree.Statement;
@@ -11,6 +14,8 @@ using HSharp.Util.Functional;
 namespace HSharp.Parsing.AbstractSnyaxTree {
 
     public class ASTBuilder {
+
+        delegate bool GrammarRule(List<ASTNode> nodes, ref int from);
 
         LexToken[] m_tokens;
         List<ASTNode> m_topNodes;
@@ -164,15 +169,15 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
             }
         }
 
-        private void ApplyGrammar(List<ASTNode> nodes, params Func<List<ASTNode>, int, bool>[] additionalPatterns) {
+        private void ApplyGrammar(List<ASTNode> nodes, int from = 0, params GrammarRule[] additionalPatterns) {
 
-            int i = 0;
+            int i = from;
             while (i < nodes.Count) {
 
                 if (additionalPatterns != null) {
                     bool skipStandard = false;
                     for (int j = 0; j < additionalPatterns.Length; j++) {
-                        if (additionalPatterns[j](nodes, i)) {
+                        if (additionalPatterns[j](nodes, ref i)) {
                             skipStandard = true;
                             break;
                         }
@@ -186,44 +191,57 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                 if (nodes[i].LexicalType == LexTokenType.Keyword) {
                     switch (nodes[i].Content) {
                         case "class":
-                            this.ApplyClassGrammar(nodes, i);
+                            this.ApplyClassGrammar(nodes, ref i);
                             break;
                         case "return":
                             this.ApplyReturnStatementGrammar(nodes, i);
+                            break;
+                        case "public":
+                        case "private":
+                        case "protected":
+                        case "external":
+                        case "internal":
+                            nodes[i] = new AccessModifierNode(nodes[i].Content, nodes[i].Pos);
                             break;
                         default:
                             throw new NotImplementedException();
                     }
                 } else if (TypeSequence<ASTNode, IdentifierNode, IdentifierNode, SeperatorNode>.Match(nodes, i)) { // int x;
+                    
+                    this.ApplyModifierGrammar(nodes, ref i, out AccessModifierNode accessModifier, out HashSet<StorageModifierNode> storageModifiers);
+                    
                     nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i], nodes[i+1].Content);
+                    this.ApplyModifiers(nodes[i] as VarDeclNode, accessModifier, storageModifiers);
+
                     nodes.RemoveRange(i + 1, 2);
+
                 } else if (TypeSequence<ASTNode, IdentifierNode, BinOpNode, SeperatorNode>.Match(nodes, i)) { // int x = <expr>;
+                    
+                    this.ApplyModifierGrammar(nodes, ref i, out AccessModifierNode accessModifier, out HashSet<StorageModifierNode> storageModifiers);
+                    
                     BinOpNode assignOp = nodes[i + 1] as BinOpNode;
                     if (assignOp.Op.CompareTo("=") == 0) {
                         this.ApplyGrammarBinary(assignOp);
                         nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i], assignOp);
+                        this.ApplyModifiers(nodes[i] as VarDeclNode, accessModifier, storageModifiers);
                         nodes.RemoveRange(i + 1, 2);
                     }
+
                 } else if (TypeSequence<ASTNode, IdentifierNode, BinOpNode, IdentifierNode, ExpressionNode, SeperatorNode>.Match(nodes, i)) {
+                    
+                    this.ApplyModifierGrammar(nodes, ref i, out AccessModifierNode accessModifier, out HashSet<StorageModifierNode> storageModifiers);
+                    
                     BinOpNode assignOp = nodes[i + 1] as BinOpNode;
                     if (assignOp.Right.LexicalType == LexTokenType.Keyword && assignOp.Right.Is("new")) { // Klass k = new Klass();
                         NewObjectNode newObjectNode = new NewObjectNode(new TypeIdentifierNode(nodes[i + 2] as IdentifierNode), nodes[i + 3] as ExpressionNode, assignOp.Right.Pos);
                         nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i], new BinOpNode(assignOp.Pos, assignOp.Left, "=", newObjectNode));
+                        this.ApplyModifiers(nodes[i] as VarDeclNode, accessModifier, storageModifiers);
                         nodes.RemoveRange(i + 1, 4);
                     } // else error?
+
                 } else if (TypeSequence<ASTNode, IdentifierNode, ExpressionNode, ASTNode, IdentifierNode, ScopeNode>.Match(nodes, i)) {
                     if (nodes[i + 2].Content.CompareTo(":") == 0) {
-                        FuncDeclNode funcDecl = new FuncDeclNode(nodes[i].Content, nodes[i].Pos) {
-                            Body = nodes[i + 4] as ScopeNode,
-                            Return = nodes[i + 3],
-                            Params = new ParamsNode(nodes[i + 1] as ExpressionNode) // Note: This constructor will apply the grammar rule on its own
-                        };
-                        if (!funcDecl.Params.IsValid) {
-                            throw new Exception();
-                        }
-                        this.ApplyGrammar(funcDecl.Body.Nodes);
-                        nodes.RemoveRange(i + 1, 4);
-                        nodes[i] = funcDecl;
+                        this.ApplyFunctionGrammar(nodes, ref i);
                     }
                 } else if (TypeSequence<ASTNode, IExpr, ExpressionNode>.Match(nodes, i)) {
                     ExpressionNode groupNode = nodes[i + 1] as ExpressionNode;
@@ -261,20 +279,77 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
             }
         }
 
-        private void ApplyClassGrammar(List<ASTNode> nodes, int from) {
+        private void ApplyModifiers<T>(T node, AccessModifierNode accessModifier, HashSet<StorageModifierNode> storageModifiers) where T : IStorageModifiable, IAccessModifiable {
+            node.SetAccessModifier(accessModifier.Modifier);
+            storageModifiers.Select(x => x.Modifier).ToList().ForEach(node.AddStorageModifier);
+        }
+
+        private void ApplyModifierGrammar(List<ASTNode> nodes, ref int from, out AccessModifierNode accessModifier, out HashSet<StorageModifierNode> storageModifiers) {
+
+            accessModifier = new AccessModifierNode("default", nodes[from].Pos);
+            storageModifiers = new HashSet<StorageModifierNode>();
+            int fromNeg = from - 1;
+            while (fromNeg >= 0) {
+                if (nodes[fromNeg] is AccessModifierNode accMod) {
+                    if (accessModifier.Modifier != AccessModifier.Default) {
+                        throw new SyntaxError(-1, accMod.Pos, "Unexpected access modifier"); // Semantic error might be more proper?
+                    } else {
+                        accessModifier = accMod;
+                    }
+                    nodes.RemoveAt(fromNeg);
+                    from--;
+                    continue;
+                } else if (nodes[fromNeg] is StorageModifierNode stoMod) {
+                    if (!storageModifiers.Add(stoMod)) {
+                        throw new SyntaxError(-1, stoMod.Pos, "Unexpected storage modifier, already exists"); // Semantic error might be more proper?
+                    }
+                    nodes.RemoveAt(fromNeg);
+                    from--;
+                    continue;
+                } else {
+                    break;
+                }
+            }
+
+        }
+
+        private bool IsInheritanceSequence(List<ASTNode> nodes, int from, out List<ASTNode> inheritance) {
+            return TypeSequenceUntil<ASTNode, ASTNode, IdentifierNode, ASTNode, ScopeNode>.Match(nodes, from, out inheritance, new Predicate<ASTNode>[] {
+                null,
+                null,
+                x => x.LexicalType == LexTokenType.Operator,
+            });
+        }
+
+        private ClassInheritanceDeclNode ApplyInheritanceGrammar(SourcePosition pos, List<ASTNode> nodes) {
+            ClassInheritanceDeclNode inheritNode = new ClassInheritanceDeclNode(pos);
+            for (int i = 0; i < nodes.Count; i++) {
+                if (nodes[i] is IdentifierNode baseIdentifier && i + 1 == nodes.Count) {
+                    inheritNode.AddType(baseIdentifier);
+                } // other cases
+            }
+            return inheritNode;
+        }
+
+        private void ApplyClassGrammar(List<ASTNode> nodes, ref int from) {
 
             string identifierName = string.Empty;
 
-            bool ClassCtorPattern(List<ASTNode> nodes, int from) { 
-                if(TypeSequence<ASTNode, IdentifierNode, ExpressionNode, ScopeNode>.Match(nodes, from)) {
+            bool ClassCtorPattern(List<ASTNode> nodes, ref int from) {
+                if (TypeSequence<ASTNode, IdentifierNode, ExpressionNode, ScopeNode>.Match(nodes, from)) {
                     if (nodes[from].Content.CompareTo(identifierName) == 0) {
+                        this.ApplyModifierGrammar(nodes, ref from, out AccessModifierNode accessModifier, out HashSet<StorageModifierNode> storageModifiers);
                         ClassCtorDecl ctor = new ClassCtorDecl(identifierName, nodes[from].Pos) {
-                            Params = new ParamsNode(nodes[from+1] as ExpressionNode),
-                            Body = nodes[from+2] as ScopeNode
+                            Params = new ParamsNode(nodes[from + 1] as ExpressionNode),
+                            Body = nodes[from + 2] as ScopeNode
                         };
                         if (!ctor.Params.IsValid) {
                             throw new Exception();
                         }
+                        
+                        // Apply modifiers
+                        this.ApplyModifiers(ctor, accessModifier, storageModifiers);
+
                         this.ApplyGrammar(ctor.Body.Nodes);
                         nodes[from] = ctor;
                         nodes.RemoveRange(from + 1, 2);
@@ -287,14 +362,38 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                 }
             }
 
+            this.ApplyModifierGrammar(nodes, ref from, out AccessModifierNode accessModifier, out HashSet<StorageModifierNode> storageModifiers);
+
+            // TODO: Parse generics here
+
+            ClassInheritanceDeclNode inheritanceDeclaration = null;
+
+            // Is inheritance sequence?
+            if (this.IsInheritanceSequence(nodes, from, out List<ASTNode> inheritance)) { // TODO: Consider generics
+
+                // Apply inheritance grammar
+                inheritanceDeclaration = this.ApplyInheritanceGrammar(nodes[from + 2].Pos, inheritance);
+
+                // Remove inheritance nodes from array
+                nodes.RemoveRange(from + 2, inheritance.Count + 1);
+
+            }
+
             if (TypeSequence<ASTNode, ASTNode, IdentifierNode, ScopeNode>.Match(nodes, from)) {
 
                 ClassDeclNode classDecl = new ClassDeclNode(nodes[from + 1].Content, nodes[from].Pos);
                 identifierName = classDecl.LocalClassName;
 
+                // Apply modifiers
+                this.ApplyModifiers(classDecl, accessModifier, storageModifiers);
+
+                if (inheritanceDeclaration is not null) {
+                    classDecl.Inheritance = inheritanceDeclaration;
+                }
+
                 ScopeNode classBody = nodes[from + 2] as ScopeNode;
 
-                this.ApplyGrammar(classBody.Nodes, ClassCtorPattern);
+                this.ApplyGrammar(classBody.Nodes, 0, ClassCtorPattern);
 
                 for (int i = 0; i < classBody.Size; i++) {
 
@@ -316,6 +415,31 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
             } else {
                 throw new Exception();
             }
+
+        }
+
+        private void ApplyFunctionGrammar(List<ASTNode> nodes, ref int from) {
+
+            // Read modifiers
+            this.ApplyModifierGrammar(nodes, ref from, out AccessModifierNode accessModifier, out HashSet<StorageModifierNode> storageModifiers);
+
+            // Create function declaration
+            FuncDeclNode funcDecl = new FuncDeclNode(nodes[from].Content, nodes[from].Pos) {
+                Body = nodes[from + 4] as ScopeNode,
+                Return = nodes[from + 3],
+                Params = new ParamsNode(nodes[from + 1] as ExpressionNode) // Note: This constructor will apply the grammar rule on its own
+            };
+
+            // Apply function modifiers
+            this.ApplyModifiers(funcDecl, accessModifier, storageModifiers);
+
+            if (!funcDecl.Params.IsValid) {
+                throw new Exception();
+            }
+
+            this.ApplyGrammar(funcDecl.Body.Nodes);
+            nodes.RemoveRange(from + 1, 4);
+            nodes[from] = funcDecl;
 
         }
 

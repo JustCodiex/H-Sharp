@@ -1,9 +1,13 @@
 ﻿using HSharp.IO;
+using HSharp.Language;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
 
 namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
     
-    public class VarDeclNode : ASTNode, IDecl {
+    public class VarDeclNode : ASTNode, IDecl, IAccessModifiable, IStorageModifiable {
+
+        private AccessModifier m_accessType = AccessModifier.Default;
+        private StorageModifier m_storageType = StorageModifier.None;
 
         public ASTNode TypeExpr { get; }
 
@@ -28,6 +32,22 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
         }
 
         public override string ToString() => this.HasAssignment ? $"{this.TypeExpr} {this.VarName} = {this.AssignToExpr};" : $"{this.TypeExpr} {this.VarName};";
+
+        public void SetAccessModifier(AccessModifier modifier) => this.m_accessType = modifier;
+
+        public AccessModifier GetAccessModifier() => this.m_accessType;
+
+        public void AddStorageModifier(StorageModifier modifier) => this.m_storageType |= modifier;
+
+        public StorageModifier GetStorageModifier() => this.m_storageType;
+
+        public bool IsAllowedStorageModifier() {
+            if (this.m_storageType.IsLegal()) {
+                return true;
+            } else {
+                return false;
+            }
+        }
 
     }
 

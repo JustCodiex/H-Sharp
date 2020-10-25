@@ -201,23 +201,15 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt $ClassDecl$ | $StaticClassDecl$ |  $InterfaceDecl$ % Ref types
 	\alt $UnionDecl$ | $EnumDecl$ | $StructDecl$ % Value types
 	
-	\gtext{ClassDecl} ::= \glit{class} $Id$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt $AccessMod$ \glit{class} $Id$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt $StorageMod$ \glit{class} $Id$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt $AccessMod$ $StorageMod$ \glit{class} $Id$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt \glit{class} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
-	\alt $AccessMod$ \glit{class} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
-	\alt $StorageMod$ \glit{class} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
-	\alt $AccessMod$ $StorageMod$ \glit{class} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
+	\gtext{ClassDecl} ::= $Modifier$ \glit{class} $Id$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt $Modifier$ \glit{class} $Id$ \glit{:} $TypeId$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt $Modifier$ \glit{class} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}} \glit{\}}
+	\alt $Modifier$ \glit{class} $Id$\glit{(}$Param$\glit{) :} $TypeId$ \glit{\{} $ClassMember$ \glit{\}} \glit{\}}
 	
-	\gtext{StructDecl} ::= \glit{struct} $Id$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt $AccessMod$ \glit{struct} $Id$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt $StorageMod$ \glit{struct} $Id$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt $AccessMod$ $StorageMod$ \glit{struct} $Id$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt \glit{struct} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
-	\alt $AccessMod$ \glit{struct} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
-	\alt $StorageMod$ \glit{struct} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
-	\alt $AccessMod$ $StorageMod$ \glit{struct} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
+	\gtext{StructDecl} ::= $Modifier$ \glit{struct} $Id$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt $Modifier$ \glit{struct} $Id$ \glit{:} $TypeId$ \glit{\{} $ClassMember$ \glit{\}}
+	\alt $Modifier$ \glit{struct} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
+	\alt $Modifier$ \glit{struct} $Id$\glit{(}$Param$\glit{) :} $TypeId$ \glit{\{} $ClassMember$ \glit{\}}
 	
 	\gtext{StaticClassDecl} ::= \glit{object} $Id$ \glit{\{} $ClassMember$ \glit{\}}
 	\alt $AccessMod$ \glit{object} $Id$ \glit{\{} $ClassMember$ \glit{\}}
@@ -271,6 +263,8 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	
 	\gtext{EnumMember} ::=  $EnumMember$\glit{,} $EnumMember$
 	\alt $Id$ | $Id$ \glit{=} $LiteralNoNull$
+	
+	\gtext{Modifier} ::= $StorageMod$ | $AccessMod$ | $AccessMod$ $StorageMod$ | $\epsilon$
 	
 	\gtext{StorageMod} ::= \glit{const} | \glit{constexpr} | \glit{static} | \glit{abstract} | \glit{override} | \glit{virtual} | \glit{final} | \glit{lazy}
 	
@@ -399,7 +393,7 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 }
 \end{figure}
 \footnotetext{Atomic type, such as \texttt{int}, \texttt{bool} or \texttt{char}.}
-Additionally, we note that $\theta$ is local to the expression while $\gamma$ and $\eta$ are global environments\footnote{With respect to current domain as elements in $\gamma$ may have local definitions not globally visible.}. Additionally, $\eta \subset \gamma$ such that no element in $\eta$ can be an atomic type and must be a type defined during compile-time. 
+Additionally, we note that $\theta$ is local to the expression while $\gamma$ and $\eta$ are global environments\footnote{With respect to current domain as elements in $\gamma$ may have local definitions not globally visible.}. Additionally, $\eta \subset \gamma$ such that no element in $\eta$ can be an atomic type and must be a type that is defined during compile-time. 
 Another thing to note is $\tau$ consists of the tuple $(\phi, \mu)$. Where $\phi$ is the set of all fields belonging to the type. Unless it's an atomic type, in which case this will be the empty set. $\mu$ is the set of all methods.% Additionally, there's the implication $t \in \phi \iff t \notin \mu$. Meaning some type identifier t can only be in one of the two (or neither).
 \begin{figure}[H]
 \centering

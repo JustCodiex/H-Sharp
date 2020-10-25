@@ -17,9 +17,20 @@ namespace HSharp.Analysis.Linking {
 
         public CompileResult Detect(Domain globalDomain) {
 
+            // 1st pass -> detect everything
             foreach (AST ast in this.m_workAsts) {
                 foreach (ASTNode node in ast.Root) {
                     var res = this.DetectInNode(node, globalDomain);
+                    if (!res) {
+                        return res;
+                    }
+                }
+            }
+
+            // 2nd pass -> handle inheritance etc. (May eventually need its own class !!! )
+            foreach (AST ast in this.m_workAsts) {
+                foreach (ASTNode node in ast.Root) {
+                    var res = this.FixInNode(node, globalDomain);
                     if (!res) {
                         return res;
                     }
@@ -172,6 +183,45 @@ namespace HSharp.Analysis.Linking {
             return new CompileResult(true);
 
         }
+
+        private CompileResult FixInNode(ASTNode node, Domain currentDomain) {
+
+            return node switch
+            {
+                ClassDeclNode classDeclNode => FixClassDecl(classDeclNode, currentDomain),
+                _ => new CompileResult(true)
+            };
+
+        }
+
+
+        private CompileResult FixClassDecl(ClassDeclNode node, Domain domain) {
+
+            ClassType classType = domain.First<ClassType>(node.LocalClassName);
+
+            if ((node.Inheritance?.InheritanceNodes.Count ?? 0) > 0) {
+
+                foreach (TypeIdentifierNode inheritFrom in node.Inheritance.InheritanceNodes) {
+
+                    if (domain.First<ClassType>(inheritFrom.Content) is ClassType baseClassType) {
+                        classType.SetBase(baseClassType);
+                    }
+
+                }
+
+            }
+
+            foreach (ClassDeclNode subClass in node.Classes) {
+                var result = this.FixClassDecl(subClass, classType);
+                if (!result) {
+                    return result;
+                }
+            }
+
+            return new CompileResult(true);
+
+        }
+
 
     }
 

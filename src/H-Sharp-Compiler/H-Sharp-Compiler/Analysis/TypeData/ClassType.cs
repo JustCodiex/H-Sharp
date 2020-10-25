@@ -6,6 +6,8 @@ namespace HSharp.Analysis.TypeData {
 
     public class ClassType : HSharpType, IRefType {
 
+        private ClassType m_baseType;
+
         public override bool IsReferenceType => true;
 
         public override string Name { get; }
@@ -19,6 +21,8 @@ namespace HSharp.Analysis.TypeData {
         public Dictionary<string, FunctionType> Methods { get; }
 
         public List<FunctionType> Constructors { get; }
+
+        public ClassType Base => this.m_baseType;
 
         public ClassType(string localClassName) {
             this.Name = localClassName;
@@ -37,8 +41,21 @@ namespace HSharp.Analysis.TypeData {
                 return this.Methods[membername];
             }
 
+            if (this.m_baseType is not null) {
+                return this.m_baseType.FindMember(membername);
+            }
+
             return null;
 
+        }
+
+        public bool SetBase(ClassType baseClass) {
+            if (this.m_baseType is null) {
+                this.m_baseType = baseClass;
+                return true;
+            } else {
+                return false;
+            }
         }
 
     }

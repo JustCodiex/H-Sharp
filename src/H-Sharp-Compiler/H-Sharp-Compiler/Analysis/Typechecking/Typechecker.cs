@@ -113,6 +113,9 @@ namespace HSharp.Analysis.Typechecking {
                 if (!this.IsAllSubtypeOf(outType, bodyResult.Item2, out string err) && funcDecl is not ClassCtorDecl) {
                     return (new CompileResult(false, err), null);
                 } else {
+                    if (!funcType.IsMethod) {
+                        tenv.MapsTo(funcDecl.Name, funcType);
+                    }
                     return (new CompileResult(true), funcType);
                 }
 
