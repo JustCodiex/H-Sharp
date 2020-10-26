@@ -13,7 +13,6 @@ namespace HSharp.Parsing {
         static string[] definiteKeywords = new string[] { // words guaranteed to be keywords
             "if",
             "for",
-            "foreach",
             "do",
             "while",
             "match",
@@ -57,11 +56,12 @@ namespace HSharp.Parsing {
 
         private static string CreatePattern() {
             if (__regpat is null) {
+                string regSingleLnComment = $"(?<singleComment>//.*(\n|\r\n|\n\r))";
                 string regOp = $"(?<op>{string.Join('|', operators)})";
                 string regInt = @"(?<ilit>\d+)";
                 string regFloat = @"(?<flit>\d+\.\d+f?)"; // floating point number (Single, Double)
                 string regId = @"(?<id>[a-zA-Z_][a-zA-Z0-9_]*)";
-                __regpat = $"{regInt}|{regFloat}|{regOp}|{regId}";
+                __regpat = $"{regSingleLnComment}|{regInt}|{regFloat}|{regOp}|{regId}";
                 return __regpat;
             } else {
                 return __regpat;
@@ -139,7 +139,7 @@ namespace HSharp.Parsing {
                             tokens.Add(new LexToken(LexTokenType.Operator, match.Value, new SourcePosition(ln, cl)));
                         }
                         break;
-                    default:
+                    default: // included single line comments
                         break;
                 }
 

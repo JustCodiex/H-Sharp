@@ -12,9 +12,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Expression {
 
         public int Size => this.m_nodes.Count;
 
-        public ExpressionNode(SourcePosition position) : base(position, "()", LexTokenType.None) {
-
-        }
+        public ExpressionNode(SourcePosition position) : base(position, "()", LexTokenType.None) {}
 
         public void SetNodes(List<ASTNode> nodes) => this.m_nodes = nodes;
 
@@ -22,7 +20,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Expression {
 
         public ASTNode this[Index index] => this.m_nodes[index];
 
-        public override string ToString() => $"( {string.Join(',', this.m_nodes)} )";
+        public override string ToString() => $"( {string.Join(' ', this.m_nodes)} )";
 
     }
 

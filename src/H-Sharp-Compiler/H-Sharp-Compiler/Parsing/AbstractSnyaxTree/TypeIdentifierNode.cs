@@ -3,7 +3,7 @@ using HSharp.Parsing.AbstractSnyaxTree.Expression;
 
 namespace HSharp.Parsing.AbstractSnyaxTree {
     
-    public class TypeIdentifierNode : ASTNode {
+    public class TypeIdentifierNode : ASTNode, ITypeIdentifier {
 
         private MemberAccessNode m_subExpr;
 

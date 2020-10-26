@@ -38,6 +38,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
             // Apply grammar rules
             this.Safe(false, () => this.ApplyGrammar(this.m_topNodes), e => { });
 
+            // Return true parse result
             return new ParsingResult(true);
 
         }
@@ -212,8 +213,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                     
                     nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i], nodes[i+1].Content);
                     this.ApplyModifiers(nodes[i] as VarDeclNode, accessModifier, storageModifiers);
-
-                    nodes.RemoveRange(i + 1, 2);
+                    this.RemoveNode(nodes, i + 1, 2);
 
                 } else if (TypeSequence<ASTNode, IdentifierNode, BinOpNode, SeperatorNode>.Match(nodes, i)) { // int x = <expr>;
                     
@@ -224,7 +224,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                         this.ApplyGrammarBinary(assignOp);
                         nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i], assignOp);
                         this.ApplyModifiers(nodes[i] as VarDeclNode, accessModifier, storageModifiers);
-                        nodes.RemoveRange(i + 1, 2);
+                        this.RemoveNode(nodes, i + 1, 2);
                     }
 
                 } else if (TypeSequence<ASTNode, IdentifierNode, BinOpNode, IdentifierNode, ExpressionNode, SeperatorNode>.Match(nodes, i)) {
@@ -236,7 +236,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                         NewObjectNode newObjectNode = new NewObjectNode(new TypeIdentifierNode(nodes[i + 2] as IdentifierNode), nodes[i + 3] as ExpressionNode, assignOp.Right.Pos);
                         nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i], new BinOpNode(assignOp.Pos, assignOp.Left, "=", newObjectNode));
                         this.ApplyModifiers(nodes[i] as VarDeclNode, accessModifier, storageModifiers);
-                        nodes.RemoveRange(i + 1, 4);
+                        this.RemoveNode(nodes, i + 1, 4);
                     } // else error?
 
                 } else if (TypeSequence<ASTNode, IdentifierNode, ExpressionNode, ASTNode, IdentifierNode, ScopeNode>.Match(nodes, i)) {
@@ -252,14 +252,14 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                     if (!callNode.Arguments.IsValid) {
                         throw new Exception();
                     }
-                    nodes.RemoveAt(i + 1);
+                    this.RemoveNode(nodes, i + 1);
                     nodes[i] = callNode;
                 } else if (nodes[i] is IGroupedASTNode groupNode) {
                     this.ApplyGrammar(groupNode.Nodes);
                 }
 
                 if (nodes[i] is IExpr && i + 1 < nodes.Count && nodes[i+1] is SeperatorNode sepNode && sepNode.Content.CompareTo(";") == 0) {
-                    nodes.RemoveAt(i + 1);
+                    this.RemoveNode(nodes, i + 1);
                 } else if (nodes[i] is IExpr && i + 1 >= nodes.Count) {
                     throw new SyntaxError(100, nodes[i].Pos, $"Expected ';' found <EOL>");
                 }
@@ -296,14 +296,14 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                     } else {
                         accessModifier = accMod;
                     }
-                    nodes.RemoveAt(fromNeg);
+                    this.RemoveNode(nodes, fromNeg);
                     from--;
                     continue;
                 } else if (nodes[fromNeg] is StorageModifierNode stoMod) {
                     if (!storageModifiers.Add(stoMod)) {
                         throw new SyntaxError(-1, stoMod.Pos, "Unexpected storage modifier, already exists"); // Semantic error might be more proper?
                     }
-                    nodes.RemoveAt(fromNeg);
+                    this.RemoveNode(nodes, fromNeg);
                     from--;
                     continue;
                 } else {
@@ -314,11 +314,28 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
         }
 
         private bool IsInheritanceSequence(List<ASTNode> nodes, int from, out List<ASTNode> inheritance) {
-            return TypeSequenceUntil<ASTNode, ASTNode, IdentifierNode, ASTNode, ScopeNode>.Match(nodes, from, out inheritance, new Predicate<ASTNode>[] {
+            if (TypeSequenceUntil<ASTNode, ASTNode, IdentifierNode, ASTNode, ScopeNode>.Match(nodes, from, out inheritance, new Predicate<ASTNode>[] {
                 null,
                 null,
                 x => x.LexicalType == LexTokenType.Operator,
-            });
+            })) {
+                return true;
+            } else if (TypeSequenceUntil<ASTNode, ASTNode, IdentifierNode, ASTNode, SeperatorNode>.Match(nodes, from, out inheritance, new Predicate<ASTNode>[] {
+                null,
+                null,
+                x => x.LexicalType == LexTokenType.Operator,
+            })) {
+                return true;
+            } else if (TypeSequenceUntil<ASTNode, ASTNode, IdentifierNode, ExpressionNode, ASTNode, SeperatorNode>.Match(nodes, from, out inheritance, new Predicate<ASTNode>[] {
+                null,
+                null,
+                null,
+                x => x.LexicalType == LexTokenType.Operator,
+            })) {
+                return true;
+            } else {
+                return false;
+            }
         }
 
         private ClassInheritanceDeclNode ApplyInheritanceGrammar(SourcePosition pos, List<ASTNode> nodes) {
@@ -326,9 +343,72 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
             for (int i = 0; i < nodes.Count; i++) {
                 if (nodes[i] is IdentifierNode baseIdentifier && i + 1 == nodes.Count) {
                     inheritNode.AddType(baseIdentifier);
-                } // other cases
+                } else if (TypeSequence<ASTNode, IdentifierNode, ExpressionNode>.Match(nodes, i) && i +2 == nodes.Count) {
+                    ArgumentsNode typeCtorArgs = new ArgumentsNode(nodes[i + 1] as ExpressionNode);
+                    if (!typeCtorArgs.IsValid) {
+                        throw new SyntaxError(-1, nodes[i + 1].Pos, string.Empty);
+                    }
+                    inheritNode.AddType(new TypeCtorNode(new TypeIdentifierNode(nodes[i] as IdentifierNode), typeCtorArgs));
+                    i++;
+                } else if (TypeSequence<ASTNode, IdentifierNode, ExpressionNode, ASTNode>.Match(nodes, i)) {
+                    throw new NotImplementedException();
+                } /* other cases*/ else {
+                    throw new SyntaxError(-1, pos, string.Empty);
+                }
             }
             return inheritNode;
+        }
+
+        private ClassInheritanceDeclNode ApplyInheritanceGrammar(List<ASTNode> nodes, int from) {
+
+            // Create inheritance
+            ClassInheritanceDeclNode inheritanceDeclaration = null;
+
+            // Is inheritance sequence?
+            if (this.IsInheritanceSequence(nodes, from, out List<ASTNode> inheritance)) { // TODO: Consider generics
+
+                // Remove offset
+                int offset = 2;
+
+                // Increase offset if there's an expression node at from + 2 (and not the ':' char)
+                if (nodes[from + 2] is ExpressionNode) {
+                    offset++;
+                }
+
+                // Apply inheritance grammar
+                inheritanceDeclaration = this.ApplyInheritanceGrammar(nodes[from + offset].Pos, inheritance);
+
+                // Remove inheritance nodes from array
+                this.RemoveNode(nodes, from + offset, inheritance.Count + 1);
+
+            }
+
+            // Return declaration
+            return inheritanceDeclaration;
+
+        }
+
+        private ClassDeclNode CreateStandardClassDecl(List<ASTNode> nodes, int from, 
+            out string identifierName,
+            AccessModifierNode accessModifier, 
+            HashSet<StorageModifierNode> storageModifiers, 
+            ClassInheritanceDeclNode inheritanceDeclaration) {
+
+            // Create class decl
+            ClassDeclNode classDecl = new ClassDeclNode(nodes[from + 1].Content, nodes[from].Pos);
+            identifierName = classDecl.LocalClassName;
+
+            // Apply modifiers
+            this.ApplyModifiers(classDecl, accessModifier, storageModifiers);
+
+            // Add inheritance if any
+            if (inheritanceDeclaration is not null) {
+                classDecl.Inheritance = inheritanceDeclaration;
+            }
+
+            // Return it
+            return classDecl;
+
         }
 
         private void ApplyClassGrammar(List<ASTNode> nodes, ref int from) {
@@ -351,8 +431,11 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                         this.ApplyModifiers(ctor, accessModifier, storageModifiers);
 
                         this.ApplyGrammar(ctor.Body.Nodes);
+                        
                         nodes[from] = ctor;
-                        nodes.RemoveRange(from + 1, 2);
+                        
+                        this.RemoveNode(nodes, from + 1, 2);
+
                         return true;
                     } else {
                         return false;
@@ -366,30 +449,16 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
             // TODO: Parse generics here
 
-            ClassInheritanceDeclNode inheritanceDeclaration = null;
+            // Create inheritance
+            ClassInheritanceDeclNode inheritanceDeclaration = this.ApplyInheritanceGrammar(nodes, from);
 
-            // Is inheritance sequence?
-            if (this.IsInheritanceSequence(nodes, from, out List<ASTNode> inheritance)) { // TODO: Consider generics
-
-                // Apply inheritance grammar
-                inheritanceDeclaration = this.ApplyInheritanceGrammar(nodes[from + 2].Pos, inheritance);
-
-                // Remove inheritance nodes from array
-                nodes.RemoveRange(from + 2, inheritance.Count + 1);
-
-            }
+            ClassDeclNode classDecl = null;
+            int removeStart = from + 1;
+            int removeEnd = 2;
 
             if (TypeSequence<ASTNode, ASTNode, IdentifierNode, ScopeNode>.Match(nodes, from)) {
 
-                ClassDeclNode classDecl = new ClassDeclNode(nodes[from + 1].Content, nodes[from].Pos);
-                identifierName = classDecl.LocalClassName;
-
-                // Apply modifiers
-                this.ApplyModifiers(classDecl, accessModifier, storageModifiers);
-
-                if (inheritanceDeclaration is not null) {
-                    classDecl.Inheritance = inheritanceDeclaration;
-                }
+                classDecl = this.CreateStandardClassDecl(nodes, from, out identifierName, accessModifier, storageModifiers, inheritanceDeclaration);
 
                 ScopeNode classBody = nodes[from + 2] as ScopeNode;
 
@@ -408,13 +477,46 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                     }
 
                 }
+                
+                removeStart = from + 1;
+                removeEnd = 2;
 
-                nodes[from] = classDecl;
-                nodes.RemoveRange(from + 1, 2);
+            } else if (TypeSequence<ASTNode, ASTNode, IdentifierNode, SeperatorNode>.Match(nodes, from)) {
+
+                classDecl = this.CreateStandardClassDecl(nodes, from, out identifierName, accessModifier, storageModifiers, inheritanceDeclaration);
+
+                removeStart = from + 1;
+                removeEnd = 3;
+
+            } else if (TypeSequence<ASTNode, ASTNode, IdentifierNode, ExpressionNode, SeperatorNode>.Match(nodes, from)) {
+
+                // Create class declaration node and parse ParamsNode
+                classDecl = this.CreateStandardClassDecl(nodes, from, out identifierName, accessModifier, storageModifiers, inheritanceDeclaration);
+                ParamsNode classParams = new ParamsNode(nodes[from + 2] as ExpressionNode);
+
+                // Throw error if params were invalid
+                if (!classParams.IsValid) {
+                    throw new SyntaxError(-1, classParams.Pos, string.Empty);
+                }
+
+                // Loop through paremeters and register them as fields
+                foreach (ParamsNode.ParameterNode p in classParams.Parameters) {
+                    // do check if property and such...
+                    classDecl.Fields.Add(new VarDeclNode(p.Pos, p.Type, p.Identifier.Content));
+                }
+
+                // Set remove parameters
+                removeStart = from + 1;
+                removeEnd = 3;
 
             } else {
-                throw new Exception();
+
+                throw new SyntaxError(-1, nodes[from].Pos, "");
+
             }
+
+            nodes[from] = classDecl;
+            this.RemoveNode(nodes, removeStart, removeEnd);
 
         }
 
@@ -438,7 +540,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
             }
 
             this.ApplyGrammar(funcDecl.Body.Nodes);
-            nodes.RemoveRange(from + 1, 4);
+            this.RemoveNode(nodes, from + 1, 4);
             nodes[from] = funcDecl;
 
         }
@@ -459,7 +561,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
             sandwichedElements.Add(nodes[i]);
 
             // Remove sandwiched elements
-            nodes.RemoveRange(from + 1, sandwichedElements.Count);
+            this.RemoveNode(nodes, from + 1, sandwichedElements.Count);
 
             // Apply grammar on expression
             this.ApplyGrammar(sandwichedElements);
@@ -509,6 +611,15 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
             return nodes;
 
+        }
+
+        private void RemoveNode(List<ASTNode> nodes, int from, int count = 1) {
+#if DEBUG
+            List<ASTNode> cpy = new List<ASTNode>();
+            cpy.AddRange(nodes);
+#endif
+            nodes.RemoveRange(from, count);
+            return;
         }
 
         private void Safe(bool enable, Action doAction, Action<Exception> handler) {

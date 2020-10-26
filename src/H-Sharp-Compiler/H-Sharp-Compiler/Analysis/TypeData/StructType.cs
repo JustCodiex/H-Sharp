@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace HSharp.Analysis.TypeData {
-    public class StructType : HSharpType, IValType {
+    
+    public class StructType : HSharpType, IValType, IExtendableType {
 
         public override bool IsReferenceType => false;
 
@@ -11,5 +12,7 @@ namespace HSharp.Analysis.TypeData {
 
         public override ushort Size { get; }
 
+        public bool IsExtensionOf(IExtendableType type) => throw new NotImplementedException();
     }
+
 }

@@ -111,7 +111,7 @@ namespace HSharp.Analysis.Typechecking {
             } else {
 
                 if (!this.IsAllSubtypeOf(outType, bodyResult.Item2, out string err) && funcDecl is not ClassCtorDecl) {
-                    return (new CompileResult(false, err), null);
+                    return (new CompileResult(false, err).SetOrigin(funcDecl), null);
                 } else {
                     if (!funcType.IsMethod) {
                         tenv.MapsTo(funcDecl.Name, funcType);
@@ -133,7 +133,7 @@ namespace HSharp.Analysis.Typechecking {
             }
 
             if (!IsSubtype(exprType, declType, out string subTypeError)) {
-                return (new CompileResult(false, subTypeError), null);
+                return (new CompileResult(false, subTypeError).SetOrigin(varDecl), null);
             } else {
                 tenv.MapsTo(varDecl.VarName, declType);
             }
@@ -331,7 +331,7 @@ namespace HSharp.Analysis.Typechecking {
             if (subType == baseType) {
                 return true;
             } else if (subType is ReferenceType subRefType && baseType is ReferenceType baseRefType) {
-                if (subRefType.Equals(baseRefType)) {
+                if (subRefType.Equals(baseRefType) || subRefType.IsSubTypeOf(baseRefType)) {
                     return true;
                 } else {
                     return false;

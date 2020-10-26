@@ -201,7 +201,7 @@ namespace HSharp.Analysis.Linking {
 
             if ((node.Inheritance?.InheritanceNodes.Count ?? 0) > 0) {
 
-                foreach (TypeIdentifierNode inheritFrom in node.Inheritance.InheritanceNodes) {
+                foreach (ITypeIdentifier inheritFrom in node.Inheritance.InheritanceNodes) {
 
                     if (domain.First<ClassType>(inheritFrom.Content) is ClassType baseClassType) {
                         classType.SetBase(baseClassType);

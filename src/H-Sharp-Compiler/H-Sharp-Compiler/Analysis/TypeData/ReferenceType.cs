@@ -29,6 +29,18 @@ namespace HSharp.Analysis.TypeData {
             }
         }
 
+        public bool IsSubTypeOf(HSharpType type) { 
+            if (this.ReferencedType is IExtendableType extendable && type is ReferenceType refType) {
+                if (refType.ReferencedType is IExtendableType extendableType) {
+                    return extendable.IsExtensionOf(extendableType);
+                } else {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
         public override int GetHashCode() => base.GetHashCode();
 
     }

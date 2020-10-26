@@ -4,7 +4,7 @@ using System.Text;
 
 namespace HSharp.Analysis.TypeData {
 
-    public class ClassType : HSharpType, IRefType {
+    public class ClassType : HSharpType, IRefType, IExtendableType {
 
         private ClassType m_baseType;
 
@@ -53,6 +53,14 @@ namespace HSharp.Analysis.TypeData {
             if (this.m_baseType is null) {
                 this.m_baseType = baseClass;
                 return true;
+            } else {
+                return false;
+            }
+        }
+
+        public bool IsExtensionOf(IExtendableType type) {
+            if (this.m_baseType is not null) {
+                return this.m_baseType == type || this.m_baseType.IsExtensionOf(type);
             } else {
                 return false;
             }

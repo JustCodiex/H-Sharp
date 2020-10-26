@@ -28,8 +28,6 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
             this.m_inheritNodes = null;
         }
 
-        public override string ToString() => $"class {this.LocalClassName} {{ {string.Join(' ', this.Classes)} {string.Join(";", this.Fields)} {string.Join(' ', this.Methods)} }}";
-
         public void SetAccessModifier(AccessModifier modifier) => this.m_accessType = modifier;
 
         public AccessModifier GetAccessModifier() => this.m_accessType;
@@ -46,6 +44,8 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
                 return false;
             }
         }
+
+        public override string ToString() => $"class {this.LocalClassName} {{ {string.Join(' ', this.Classes)} {string.Join(' ', this.Fields)} {string.Join(' ', this.Methods)} }}";
 
     }
 

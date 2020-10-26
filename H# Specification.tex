@@ -165,7 +165,7 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt \glit{do} $Scope$ \glit{while} $Expr$\glit{;}
 	\alt \glit{for} \glit{(}$Assignment$\glit{;} $Expr$\glit{;} $Expr$\glit{)} $Scope$
 	\alt \glit{for} \glit{(}$VarDeclaration$\glit{;} $Expr$\glit{;} $Expr$\glit{)} $Scope$
-	\alt \glit{foreach} \glit{(}$TypeId$ $Id$ {in} $Expr$\glit{)} $Scope$
+	\alt \glit{for} \glit{(}$TypeId$ $Id$ \glit{:} $Expr$\glit{)} $Scope$
 	\alt \glit{throw} $TypeID$\glit{(}$Argument$\glit{)}
 	\alt \glit{return} $Expr$\glit{;}
 	\alt \glit{break;}
@@ -198,26 +198,29 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt $Id$ \glit{\%=} $Expr$
 	
 	\gtext{Declaration} ::=  $VarDecl$ | $FuncDecl$ % Variable declaration
-	\alt $ClassDecl$ | $StaticClassDecl$ |  $InterfaceDecl$ % Ref types
+	\alt $ClassDecl$ | $StaticClassDecl$ |  $TraitDecl$ % Ref types
 	\alt $UnionDecl$ | $EnumDecl$ | $StructDecl$ % Value types
+	\alt $TraitUniversal$ % Other
 	
-	\gtext{ClassDecl} ::= $Modifier$ \glit{class} $Id$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt $Modifier$ \glit{class} $Id$ \glit{:} $TypeId$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt $Modifier$ \glit{class} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}} \glit{\}}
-	\alt $Modifier$ \glit{class} $Id$\glit{(}$Param$\glit{) :} $TypeId$ \glit{\{} $ClassMember$ \glit{\}} \glit{\}}
+	\gtext{ClassDecl} ::= $Modifier$ \glit{class} $Id$ $ClassBody$
+	\alt $Modifier$ \glit{class} $Id$ \glit{:} $ParamType$ $ClassBody$
+	\alt $Modifier$ \glit{class} $Id$\glit{(}$Param$\glit{)} $ClassBody$
+	\alt $Modifier$ \glit{class} $Id$\glit{(}$Param$\glit{) :} $ParamType$ $ClassBody$
 	
-	\gtext{StructDecl} ::= $Modifier$ \glit{struct} $Id$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt $Modifier$ \glit{struct} $Id$ \glit{:} $TypeId$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt $Modifier$ \glit{struct} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
-	\alt $Modifier$ \glit{struct} $Id$\glit{(}$Param$\glit{) :} $TypeId$ \glit{\{} $ClassMember$ \glit{\}}
+	\gtext{StructDecl} ::= $Modifier$ \glit{struct} $Id$ $ClassBody$
+	\alt $Modifier$ \glit{struct} $Id$ \glit{:} $ParamType$ $ClassBody$
+	\alt $Modifier$ \glit{struct} $Id$\glit{(}$Param$\glit{)} $ClassBody$
+	\alt $Modifier$ \glit{struct} $Id$\glit{(}$Param$\glit{) :} $ParamType$ $ClassBody$
 	
-	\gtext{StaticClassDecl} ::= \glit{object} $Id$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt $AccessMod$ \glit{object} $Id$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt \glit{object} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
-	\alt $AccessMod$ \glit{object} $Id$\glit{(}$Param$\glit{)} \glit{\{} $ClassMember$ \glit{\}}
+	\gtext{StaticClassDecl} ::= \glit{object} $Id$ $ClassBody$
+	\alt $AccessMod$ \glit{object} $Id$ $ClassBody$
+	\alt \glit{object} $Id$\glit{(}$Param$\glit{)} $ClassBody$
+	\alt $AccessMod$ \glit{object} $Id$\glit{(}$Param$\glit{)} $ClassBody$
 	
-	\gtext{InterfaceDecl} ::= \glit{interface} $Id$ \glit{\{} $ClassMember$ \glit{\}}
-	\alt $AccessMod$ \glit{interface} $Id$ \glit{\{} $ClassMember$ \glit{\}}
+	\gtext{TraitDecl} ::= \glit{trait} $Id$ $ClassBody$
+	\alt $AccessMod$ \glit{trait} $Id$ $ClassBody$
+	
+	\gtext{ClassBody} ::= \glit{;} | \glit{\{} $ClassMember$ \glit{\}}
 	
 	\gtext{ClassMember} ::= $ClassMember$ $ClassMember$
 	\alt $Id$\glit{(}$Param$\glit{)} $FuncBody$ | $AcessMod$ $Id$\glit{(}$Param$\glit{)} $FuncBody$ %ctor
@@ -266,7 +269,8 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	
 	\gtext{Modifier} ::= $StorageMod$ | $AccessMod$ | $AccessMod$ $StorageMod$ | $\epsilon$
 	
-	\gtext{StorageMod} ::= \glit{const} | \glit{constexpr} | \glit{static} | \glit{abstract} | \glit{override} | \glit{virtual} | \glit{final} | \glit{lazy}
+	\gtext{StorageMod} ::= \glit{const} | \glit{constexpr} | \glit{static} | \glit{abstract} | \glit{override} | \glit{virtual} | \glit{final}
+	\alt \glit{lazy} | \glit{inline}
 	
 	\gtext{AccessMod} ::= \glit{public} | \glit{private} | \glit{protected} | \glit{internal} | \glit{external}
 	
@@ -274,21 +278,25 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt $TypeId$ $Id$ | \glit{const} $TypeId$ $Id$
 	\alt $ParamType$ $Id$
 	
-	\gtext{ParamType} ::= $TypeId$ | $TypeId$\glit{,} $TypeId$
+	\gtext{ParamType} ::= $TypeId$ | $ParameterizedType$ | $ParamType$\glit{,} $ParamType$
 
+	\gtext{LambdaType} ::= \glit{(}$ParamType$\glit{):} $TypeId$
+	\alt $TypeId$ \glit{:} $TypeId$
+	
+	\gtext{ParameterizedType} ::= \glit{\textless}$TypeId$\glit\textgreater{}	
+	
 	\gtext{Argument} ::= $Expr$ | $Expr$\glit{,} $Expr$
 	
 	\gtext{Name} ::= $Id$ | $Name$\glit{.}$Name$	
 	
 	\newpage	
 	
-	\gtext{LambdaType} ::= \glit{(}$ParamType$\glit{):} $TypeId$
-	\alt $TypeId$ \glit{:} $TypeId$
+	\gtext{TraitUniversal} ::= \glit{trait} $TypeId$ \glit{for} $TypeId$ $Scope$
 	
 	\gtext{BinaryOp} ::= \glit{+} | \glit{-} | \glit{*} | \glit{/} | \glit{\%} | \glit{\textless} | \glit{\textgreater} | \glit{\textless}= | \glit{\textgreater}= | \glit{==} | \glit{!=}
 	\alt \glit{\textbar\textbar} | $\&\&$ | \glit{\textbar} | $\&$ | \glit{\textless\textless} | \glit{\textgreater\textgreater} | \glit{=>} | \glit{::} | \glit{??} | \glit{..}
 	
-	\gtext{UnaryOp} ::= \glit{-} | \glit{!} | \glit{\#} | \glit{++} | \glit{--}
+	\gtext{UnaryOp} ::= \glit{-} | \glit{!} | \glit{\#} | \glit{++} | \glit{--} | \glit{*}
 	
 	\gtext{LiteralNoNull}	::= $IntLit$ | $FloatLit$ | $DoubleLit$ | $BoolLit$ | $CharLit$ | $StringLit$
 	
@@ -315,6 +323,7 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 \end{grammar}
 \newpage
 \newsection{Operational Semantics}
+\newsubsubsection{General Semantics}
 \begin{figure}[H]
 \centering
 	\begin{mathparpagebreakable}
@@ -336,6 +345,12 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 		\and
 	\end{mathparpagebreakable}
 \end{figure}\noindent
+\newsubsubsection{Classes}
+\newsubsubsection{Objects}
+\newsubsubsection{Structs}
+\newsubsubsection{Union}
+\newsubsubsection{Enum}
+\newsubsubsection{Traits}
 \newpage
 \newsection{Type Semantics}
 \begin{figure}[H]

@@ -1,6 +1,13 @@
 \BOOKMARK [1][-]{section*.2}{Abstract}{}% 1
 \BOOKMARK [1][-]{section*.4}{Grammar}{}% 2
 \BOOKMARK [1][-]{section*.6}{Operational Semantics}{}% 3
-\BOOKMARK [1][-]{section*.9}{Type Semantics}{}% 4
-\BOOKMARK [1][-]{section*.13}{Compilation Semantics}{}% 5
-\BOOKMARK [1][-]{section*.15}{Bytecode Semantics}{}% 6
+\BOOKMARK [2][-]{section*.8}{General Semantics}{section*.6}% 4
+\BOOKMARK [3][-]{section*.11}{Classes}{section*.8}% 5
+\BOOKMARK [3][-]{section*.13}{Objects}{section*.8}% 6
+\BOOKMARK [3][-]{section*.15}{Structs}{section*.8}% 7
+\BOOKMARK [3][-]{section*.17}{Union}{section*.8}% 8
+\BOOKMARK [3][-]{section*.19}{Enum}{section*.8}% 9
+\BOOKMARK [3][-]{section*.21}{Traits}{section*.8}% 10
+\BOOKMARK [1][-]{section*.23}{Type Semantics}{}% 11
+\BOOKMARK [1][-]{section*.27}{Compilation Semantics}{}% 12
+\BOOKMARK [1][-]{section*.29}{Bytecode Semantics}{}% 13
