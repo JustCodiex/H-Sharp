@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace HSharp.Analysis.TypeData {
     
@@ -11,6 +9,8 @@ namespace HSharp.Analysis.TypeData {
         public override string Name { get; }
 
         public override ushort Size { get; }
+
+        public IExtendableType Base { get; }
 
         public bool IsExtensionOf(IExtendableType type) => throw new NotImplementedException();
     }

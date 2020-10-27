@@ -23,6 +23,11 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
 
         public int Count => this.Parameters.Length;
 
+        public ParamsNode(SourcePosition position) : base(position, string.Empty, LexTokenType.None) {
+            this.m_params = new ParameterNode[0];
+            this.IsValid = true;
+        }
+
         public ParamsNode(ExpressionNode source) : base(source.Pos, source.Content, source.LexicalType) {
 
             // Count the parameters

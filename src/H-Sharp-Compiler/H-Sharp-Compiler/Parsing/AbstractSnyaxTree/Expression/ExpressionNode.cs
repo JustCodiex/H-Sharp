@@ -14,6 +14,10 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Expression {
 
         public ExpressionNode(SourcePosition position) : base(position, "()", LexTokenType.None) {}
 
+        public ExpressionNode(SourcePosition position, List<ASTNode> nodes) : base(position, "()", LexTokenType.None) {
+            this.m_nodes = nodes;
+        }
+
         public void SetNodes(List<ASTNode> nodes) => this.m_nodes = nodes;
 
         public ASTNode this[int index] => this.m_nodes[index];

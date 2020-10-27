@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using HSharp.IO;
+using HSharp.Parsing.AbstractSnyaxTree.Declaration;
 
 namespace HSharp.Analysis.TypeData {
     
@@ -12,14 +14,19 @@ namespace HSharp.Analysis.TypeData {
 
         public List<HSharpType> ParameterTypes { get; }
 
+        public FuncDeclNode Origin { get; }
+
+        public SourcePosition CodeOrigin => this.Origin.Pos;
+
         public bool IsMethod => this.Owner is null;
 
         public override bool IsReferenceType => false;
 
         public override ushort Size => 0;
 
-        public FunctionType(string methodname, ClassType owner, HSharpType returnType, List<HSharpType> parameters) {
+        public FunctionType(string methodname, ClassType owner, FuncDeclNode declOrigin, HSharpType returnType, List<HSharpType> parameters) {
             this.Name = methodname;
+            this.Origin = declOrigin;
             this.Owner = owner;
             this.ReturnType = returnType;
             this.ParameterTypes = parameters;

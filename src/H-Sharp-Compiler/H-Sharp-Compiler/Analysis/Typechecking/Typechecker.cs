@@ -41,13 +41,14 @@ namespace HSharp.Analysis.Typechecking {
             MemberAccessNode memberAccess => this.TypecheckMemberAccessOperation(memberAccess, tenv, domain),
             IdentifierNode id => this.TypecheckIdentifierOperation(id, tenv, domain),
             ThisNode thisNode => this.TypecheckIdentifierOperation(thisNode, tenv, domain),
+            BaseNode baseNode => this.TypecheckBaseOperation(baseNode, tenv, domain),
             ReturnStatement returnStatement => this.TypecheckNode(returnStatement.Expression as ASTNode, tenv, domain),
             NewObjectNode newObject => this.TypecheckNewOperation(newObject, tenv, domain),
             CallNode callNode => this.TypecheckCallOperation(callNode, tenv, domain),
             ScopeNode scope => this.TypecheckScope(scope, tenv, domain).Select(x => x, y => y[^1]),
             ExpressionNode expr => this.TypecheckExpressionOperation(expr, tenv, domain),
             ILiteral lit => this.TypecheckConstOperation(lit, domain),
-            _ => (new CompileResult(false), null),
+            _ => (new CompileResult(false, $"Unsupported compile element '{node.NodeType}'").SetOrigin(node), null),
         };
 
         private (CompileResult, IValType) TypecheckClassDeclOperation(ClassDeclNode classDecl, TypeEnvironment tenv, Domain domain) {
@@ -162,25 +163,25 @@ namespace HSharp.Analysis.Typechecking {
                         if (expr1.Item2 == expr2.Item2) {
                             return (new CompileResult(true), expr1.Item2);
                         } else {
-                            return (new CompileResult(false), null);
+                            return (new CompileResult(false).SetOrigin(binop), null);
                         }
                     case "-":
                         if (expr1.Item2 == expr2.Item2) {
                             return (new CompileResult(true), expr1.Item2);
                         } else {
-                            return (new CompileResult(false), null);
+                            return (new CompileResult(false).SetOrigin(binop), null);
                         }
                     case "*":
                         if (expr1.Item2 == expr2.Item2) {
                             return (new CompileResult(true), expr1.Item2);
                         } else {
-                            return (new CompileResult(false), null);
+                            return (new CompileResult(false).SetOrigin(binop), null);
                         }
                     case "/":
                         if (expr1.Item2 == expr2.Item2) {
                             return (new CompileResult(true), expr1.Item2);
                         } else {
-                            return (new CompileResult(false), null);
+                            return (new CompileResult(false).SetOrigin(binop), null);
                         }
                     default:
                         return (new CompileResult(false, $"Unknown operator '{binop.Op}'.").SetOrigin(binop.Pos), null);
@@ -220,10 +221,20 @@ namespace HSharp.Analysis.Typechecking {
 
             if (left.Item2 is ReferenceType refType) {
                 if (refType.ReferencedType is ClassType refClassType) {
-                    if (refClassType.FindMember(memberAccess.Right.Content) is HSharpType refClassMember) {
-                        return (new CompileResult(true), refClassMember is IRefType ? new ReferenceType(refClassMember) : refClassMember as IValType);
+                    if (memberAccess.AccessMethodType.CompareTo(".") == 0) {
+                        if (refClassType.FindMember(memberAccess.Right.Content) is HSharpType refClassMember) {
+                            return (new CompileResult(true), refClassMember is IRefType ? new ReferenceType(refClassMember) : refClassMember as IValType);
+                        } else {
+                            return (new CompileResult(false, $"Class '{refClassType.Name}' has no member by name '{memberAccess.Right.Content}'.").SetOrigin(memberAccess.Pos), null);
+                        }
+                    } else if (memberAccess.AccessMethodType.CompareTo(MemberAccessNode.CtorAccess) == 0) {
+                        if (refClassType.Constructors.Find(x => x.Name.CompareTo(memberAccess.Right.Content) == 0) is FunctionType ctor) {
+                            return (new CompileResult(true), VoidType.Void);
+                        } else {
+                            return (new CompileResult(false, $"'base' has no constructor with specified signature!").SetOrigin(memberAccess.Pos), null);
+                        }
                     } else {
-                        return (new CompileResult(false, $"Class '{refClassType.Name}' has no member by name '{memberAccess.Right.Content}'.").SetOrigin(memberAccess.Pos), null);
+                        throw new NotImplementedException();
                     }
                 }
             } else {
@@ -259,7 +270,7 @@ namespace HSharp.Analysis.Typechecking {
                 return (result, null);
             }
 
-            if (callType is FunctionType func) {
+            if (callType is not null) {
 
                 foreach (ASTNode arg in callNode.Arguments.Arguments) {
                     var res = this.TypecheckNode(arg, tenv, domain);
@@ -268,11 +279,29 @@ namespace HSharp.Analysis.Typechecking {
                     }
                 }
 
-                return (new CompileResult(true), func.ReturnType is IValType ? func.ReturnType as IValType : new ReferenceType(func.ReturnType) as IValType);
+                if (callType is FunctionType func) { // normal method/function
+                    return (new CompileResult(true), func.ReturnType is IValType ? func.ReturnType as IValType : new ReferenceType(func.ReturnType));
+                } else if (callType is VoidType) { // ctor
+                    return (new CompileResult(true), callType);
+                }
 
-            } else {
-                return (new CompileResult(false, $"Cannot invoke class member '{callNode.IdentifierNode}'").SetOrigin(callNode), null);
             }
+
+            return (new CompileResult(false, $"Cannot invoke class member '{callNode.IdentifierNode}'").SetOrigin(callNode), null);
+
+        }
+
+        private (CompileResult, IValType) TypecheckBaseOperation(BaseNode baseNode, TypeEnvironment tenv, Domain domain) {
+
+            IValType thisNode = tenv.Lookup("this");
+
+            if (thisNode is ReferenceType refType) {
+                if (refType.ReferencedType is IExtendableType extendable && this.TypeOf(extendable.Base) is IValType extAsVal) {
+                    return (new CompileResult(true), extAsVal);
+                }
+            }
+
+            return (new CompileResult(false).SetOrigin(baseNode), null);
 
         }
 
@@ -359,6 +388,16 @@ namespace HSharp.Analysis.Typechecking {
                 return new ReferenceType(type);
             } else {
                 return type as IValType;
+            }
+        }
+
+        private IValType TypeOf(IExtendableType type) {
+            if (type is ClassType klass) {
+                return new ReferenceType(klass);
+            } else if (type is StructType strct) {
+                return strct;
+            } else {
+                return null;
             }
         }
 

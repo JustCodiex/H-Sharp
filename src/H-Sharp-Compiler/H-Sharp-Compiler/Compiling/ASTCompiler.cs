@@ -156,6 +156,7 @@ namespace HSharp.Compiling {
             List<ByteInstruction> instructions = node switch
             {
                 ThisNode => Instruction(new ByteInstruction(Bytecode.PUSH, 0)),
+                BaseNode => Instruction(new ByteInstruction(Bytecode.PUSH, 0)),
                 IntLitNode intLitNode => this.CompileConstant(intLitNode),
                 IdentifierNode idNode => Instruction(new ByteInstruction(idNode.IsFuncIdentifier ? Bytecode.PUSHCLOSURE : Bytecode.PUSH, idNode.Index)),
                 BinOpNode binOpNode => this.CompileBinaryOperation(binOpNode, context),

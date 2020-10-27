@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using HSharp.IO;
 
 namespace HSharp.Analysis.TypeData {
 
@@ -14,6 +15,8 @@ namespace HSharp.Analysis.TypeData {
 
         public override ushort Size => 0; // TODO: Change
 
+        public SourcePosition CodeOrigin { get; }
+
         public Dictionary<string, HSharpType> Fields { get; }
 
         public Dictionary<string, ClassType> Classes { get; }
@@ -22,10 +25,11 @@ namespace HSharp.Analysis.TypeData {
 
         public List<FunctionType> Constructors { get; }
 
-        public ClassType Base => this.m_baseType;
+        public IExtendableType Base => this.m_baseType;
 
-        public ClassType(string localClassName) {
+        public ClassType(string localClassName, SourcePosition origin) {
             this.Name = localClassName;
+            this.CodeOrigin = origin;
             this.Constructors = new List<FunctionType>();
             this.Fields = new Dictionary<string, HSharpType>();
             this.Classes = new Dictionary<string, ClassType>();

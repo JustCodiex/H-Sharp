@@ -20,6 +20,8 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Expression {
 
         public void SetNodes(List<ASTNode> nodes) => this.m_nodes = nodes;
 
+        public void InjectNodes(List<ASTNode> nodes, int pos) => this.m_nodes.InsertRange(pos, nodes);
+
         public ASTNode this[int index] => this.m_nodes[index];
 
         public override string ToString() => $"{{ {string.Join(' ', this.m_nodes)} }}";

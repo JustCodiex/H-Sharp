@@ -1,10 +1,11 @@
-﻿using System;
+﻿using System.Diagnostics;
 using HSharp.Analysis;
 using HSharp.Analysis.Linking;
 using HSharp.Analysis.Typechecking;
 using HSharp.Analysis.Verifying;
 using HSharp.Compiling;
 using HSharp.IO;
+using HSharp.Metadata;
 using HSharp.Parsing;
 using HSharp.Parsing.AbstractSnyaxTree;
 
@@ -14,28 +15,47 @@ namespace HSharp {
     
         public CompileResult CompileProject(SourceProject project) {
 
+            var _thisLog = new Log();
+            var _thistimer = Stopwatch.StartNew();
+
             AST[] asts = new AST[project.CodeFiles.Length];
             for (int i = 0; i < project.CodeFiles.Length; i++) {
                 var parseResult = this.ParseFile(project.CodeFiles[i], out AST ast);
                 if (!parseResult) {
-                    Console.WriteLine($"Failed to parse {project.CodeFiles[i]} :\n\t{"Some currently un-generated error!"}");
+                    Log.WriteLine($"Failed to parse {project.CodeFiles[i]} :\n\t{"Some currently un-generated error!"}");
+                    Log.WriteLine();
                     return parseResult;
                 }
                 asts[i] = ast;
             }
 
+            // Create the global domain
             Domain globalDomain = Domain.GetGlobalDomain();
-            StaticTypeDetector statTypeDetector = new StaticTypeDetector(asts);
 
             // Detect types
-            CompileResult result = statTypeDetector.Detect(globalDomain);
+            CompileResult result = StaticTypeDetector.Detect(asts, globalDomain);
             if (!result) {
+                Log.WriteLine($"Compile Error \"{project.Name}\" : {result}");
+                Log.WriteLine();
+                _thisLog.SaveAndClose(project.Output.Replace(".bin", ".log"));
                 return result;
             }
 
             // Define types
-            result = statTypeDetector.DefineAllTypes(globalDomain);
+            result = StaticTypeDefiner.DefineAllTypes(asts, globalDomain);
             if (!result) {
+                Log.WriteLine($"Compile Error \"{project.Name}\" : {result}");
+                Log.WriteLine();
+                _thisLog.SaveAndClose(project.Output.Replace(".bin", ".log"));
+                return result;
+            }
+
+            // Solve potential 
+            result = InheritanceSolver.Solve(asts, globalDomain);
+            if (!result) {
+                Log.WriteLine($"Compile Error \"{project.Name}\" : {result}");
+                Log.WriteLine();
+                _thisLog.SaveAndClose(project.Output.Replace(".bin", ".log"));
                 return result;
             }
 
@@ -43,33 +63,49 @@ namespace HSharp {
 
             VarsVerifier vVerifier = new VarsVerifier();
             for (int i = 0; i < asts.Length; i++) {
-                var varsResult = vVerifier.Vars(asts[i]);
-                if (!varsResult) {
-                    return varsResult;
+                result = vVerifier.Vars(asts[i]);
+                if (!result) {
+                    Log.WriteLine($"Compile Error \"{project.Name}\" : {result}");
+                    Log.WriteLine();
+                    _thisLog.SaveAndClose(project.Output.Replace(".bin", ".log"));
+                    return result;
                 }
             }
 
             Typechecker typechecker = new Typechecker();
             for (int i = 0; i < asts.Length; i++) {
-                var varsResult = typechecker.Typecheck(asts[i], globalDomain);
-                if (!varsResult) {
-                    return varsResult;
+                result = typechecker.Typecheck(asts[i], globalDomain);
+                if (!result) {
+                    Log.WriteLine($"Compile Error \"{project.Name}\" : {result}");
+                    Log.WriteLine();
+                    _thisLog.SaveAndClose(project.Output.Replace(".bin", ".log"));
+                    return result;
                 }
             }
 
             ASTCompiler astCompiler = new ASTCompiler(asts);
             result = astCompiler.Compile();
             if (!result) {
-                Console.WriteLine("Failed to compile project. \n\tSome currently not-generated error");
+                Log.WriteLine("Failed to compile project. \n\tSome currently not-generated error");
+                Log.WriteLine();
                 return result;
             }
+
+            _thistimer.Stop();
 
             ProgramOutput compilerOutput = astCompiler.GetProgram();
 
             if (compilerOutput is not null) {
                 compilerOutput.Save(project.Output);
+                compilerOutput.SaveAsText(project.Output.Replace(".bin", ".txt"));
+                Log.WriteLine($"Compiled \"{project.Name}\" successfully in {_thistimer.ElapsedMilliseconds / 1000.0}s.");
+                Log.WriteLine();
+                _thisLog.SaveAndClose(project.Output.Replace(".bin", ".log"));
                 return new CompileResult(true);
             } else {
+                Log.WriteLine($"Compile Error \"{project.Name}\" : {result}");
+                Log.WriteLine();
+                _thisLog.SaveAndClose(project.Output.Replace(".bin", ".log"));
                 return new CompileResult(false);
             }
 
@@ -80,7 +116,7 @@ namespace HSharp {
             Lexer lexer = new Lexer();
             LexToken[] tokens = lexer.Lex(sourceFilePath);
 
-            Console.WriteLine($"Parsing {sourceFilePath}");
+            Log.WriteLine($"Parsing {sourceFilePath}");
 
             ASTBuilder builder = new ASTBuilder(tokens);
             ParsingResult result = builder.Parse();

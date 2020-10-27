@@ -1,0 +1,14 @@
+public abstract class Base {
+    PrintStuff():void;
+}
+
+public class Mul : Base {
+    PrintStuff():void { /* stuff */ }
+}
+
+public object One : Base {
+    PrintStuff():void { /* stuff */ }
+}
+
+Base b = One;
+b.PrintStuff();

@@ -1,6 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using HSharp.Metadata;
 using HSharp.Parsing.AbstractSnyaxTree;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
@@ -12,12 +12,6 @@ namespace HSharp.Analysis.Verifying {
     
     public class VarsVerifier {
     
-        public VarsVerifier() {
-
-
-
-        }
-
         public CompileResult Vars(AST ast) {
 
             VarScope vScope = new VarScope();
@@ -107,10 +101,11 @@ namespace HSharp.Analysis.Verifying {
                     this.VarsNode(returnStatementNode.Expression as ASTNode, scope);
                     break;
                 case ThisNode:
+                case BaseNode:
                 case IntLitNode:
                     break;
                 default:
-                    Console.WriteLine($"Vars not implemented for type: {node.GetType().Name}");
+                    Log.WriteLine($"Vars not implemented for type: {node.GetType().Name}");
                     break;
             }
 

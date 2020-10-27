@@ -1,6 +1,6 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using HSharp.IO;
+using HSharp.Metadata;
 
 namespace HSharp {
     
@@ -17,6 +17,7 @@ namespace HSharp {
             ParseArguments(args);
 
             Current = new Compiler();
+            Log _fullLog = new Log();
 
             if (inputFile is not null && outputFile is not null) {
 
@@ -26,20 +27,24 @@ namespace HSharp {
 
             if (regressionTest) {
 
+                int s = 0, f = 0;
                 string[] source = Directory.GetFiles("regression\\", "*.hsharp");
+
                 for (int i = 0; i < source.Length; i++) {
                     SourceProject project = new SourceProject(source[i]);
                     var r = Current.CompileProject(project);
                     if (r) {
-                        Console.WriteLine($"Compiled \"{source[i]}\" successfully.");
+                        s++;
                     } else {
-                        Console.WriteLine($"Compile Error \"{source[i]}\" : {r}");
+                        f++;
                     }
                 }
 
+                Log.WriteLine($"Regression test: {s} succeeded, {f} failed. ({s + f} total)");
+
             }
 
-            Console.ReadLine();
+            _fullLog.SaveAndClose("last-run.log");
 
         }
 

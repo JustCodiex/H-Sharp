@@ -267,12 +267,20 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\gtext{EnumMember} ::=  $EnumMember$\glit{,} $EnumMember$
 	\alt $Id$ | $Id$ \glit{=} $LiteralNoNull$
 	
-	\gtext{Modifier} ::= $StorageMod$ | $AccessMod$ | $AccessMod$ $StorageMod$ | $\epsilon$
+	\gtext{Modifier} ::= $StorageMod$ | $AccessMod$ | $TypeMod$ | $CompilerHintMod$ | $\epsilon$
+	\alt $AccessMod$ $StorageMod$ | $AccessMod$ \glit{abstract} \glit{variant}
+	\alt $AccessMod$ $CompilerHintMod$ | $AccessMod$ $StorageMod$ $CompilerHintMod$
+	\alt $AccessMod$ $StorageMod$ $CompilerHintMod$ | $AccessMod$ $TypeMod$
 	
-	\gtext{StorageMod} ::= \glit{const} | \glit{constexpr} | \glit{static} | \glit{abstract} | \glit{override} | \glit{virtual} | \glit{final}
-	\alt \glit{lazy} | \glit{inline}
+	\gtext{StorageMod} ::= \glit{const} | \glit{static} | \glit{override} | \glit{virtual} | \glit{lazy}
+	
+	\gtext{TypeMod} ::= \glit{variant} | \glit{abstract}
+	
+	\gtext{CompilerHintMod} ::= \glit{inline} | \glit{final} | \glit{constexpr}
 	
 	\gtext{AccessMod} ::= \glit{public} | \glit{private} | \glit{protected} | \glit{internal} | \glit{external}
+	
+	\newpage	
 	
 	\gtext{Param} ::= $Param$\glit{,} $Param$
 	\alt $TypeId$ $Id$ | \glit{const} $TypeId$ $Id$
@@ -288,8 +296,6 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\gtext{Argument} ::= $Expr$ | $Expr$\glit{,} $Expr$
 	
 	\gtext{Name} ::= $Id$ | $Name$\glit{.}$Name$	
-	
-	\newpage	
 	
 	\gtext{TraitUniversal} ::= \glit{trait} $TypeId$ \glit{for} $TypeId$ $Scope$
 	

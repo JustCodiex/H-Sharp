@@ -70,6 +70,33 @@ namespace HSharp.IO {
 
         }
 
+        public void SaveAsText(string outputPath) {
+
+            using (StreamWriter writer = new StreamWriter(outputPath)) {
+
+                writer.WriteLine($"Instruction offset: 0x{this.m_instructionOffset:X8}");
+                writer.WriteLine();
+
+                writer.WriteLine("Instructions:");
+                for (int i = 0; i < this.m_instructions.Length; i++) {
+
+                    writer.WriteLine($"\t[{i:0000}]\t{this.m_instructions[i].Op}{(this.m_instructions[i].Args.Length > 0 ? ($", {string.Join(", ", this.m_instructions[i].Args)}") : string.Empty)}");
+
+                }
+
+                writer.WriteLine();
+                writer.WriteLine("Functions:");
+
+                int j = 0;
+                foreach (var pair in this.m_funcOffsets) {
+                    writer.WriteLine($"\t[{j:000}] {pair.Key}: 0x{pair.Value:X8}");
+                    j++;
+                }
+
+            }
+
+        }
+
     }
 
 }

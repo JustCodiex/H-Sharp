@@ -4,6 +4,9 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Expression {
     
     public class MemberAccessNode : ASTNode, IExpr {
 
+        public const string MemberAccess = ".";
+        public const string CtorAccess = ".ctor:";
+
         public IExpr Left { get; }
 
         public IdentifierNode Right { get; }

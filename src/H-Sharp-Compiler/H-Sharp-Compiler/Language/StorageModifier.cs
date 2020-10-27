@@ -9,11 +9,10 @@ namespace HSharp.Language {
         Const = 1,
         ConstExpr = 2,
         Static = 4,
-        Abstract = 8,
-        Override = 16,
-        Virtual = 32,
-        Final = 64,
-        Lazy = 128,
+        Override = 8,
+        Virtual = 16,
+        Final = 32, // sealed
+        Lazy = 64,
 
     }
 
