@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using HSharp.IO;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
+using HSharp.Parsing.AbstractSnyaxTree.Type;
 
 namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
     
@@ -14,7 +15,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
 
         public void AddType(IdentifierNode identifier) => this.InheritanceNodes.Add(new TypeIdentifierNode(identifier));
 
-        public void AddType(TypeCtorNode ctor) => this.InheritanceNodes.Add(ctor);
+        public void AddType(ITypeIdentifier identifier) => this.InheritanceNodes.Add(identifier);
 
         public override string ToString() => InheritanceNodes.Count > 0 ? $":{string.Join(",", InheritanceNodes)}" : string.Empty;
 

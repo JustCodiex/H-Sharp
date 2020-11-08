@@ -9,7 +9,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
         private AccessModifier m_accessType = AccessModifier.Default;
         private StorageModifier m_storageType = StorageModifier.None;
 
-        public ASTNode TypeExpr { get; }
+        public ITypeIdentifier TypeExpr { get; }
 
         public string VarName { get; }
 
@@ -19,13 +19,13 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
 
         public ushort EnterIndex { get; set; }
 
-        public VarDeclNode(SourcePosition pos, ASTNode varTypeNode, BinOpNode assignNode) : base(pos, "=", LexTokenType.None) {
+        public VarDeclNode(SourcePosition pos, ITypeIdentifier varTypeNode, BinOpNode assignNode) : base(pos, "=", LexTokenType.None) {
             this.TypeExpr = varTypeNode;
             this.VarName = assignNode.Left.Content;
             this.AssignToExpr = assignNode.Right;
         }
 
-        public VarDeclNode(SourcePosition pos, ASTNode varTypeNode, string identifier) : base(pos, "=", LexTokenType.None) {
+        public VarDeclNode(SourcePosition pos, ITypeIdentifier varTypeNode, string identifier) : base(pos, "=", LexTokenType.None) {
             this.TypeExpr = varTypeNode;
             this.VarName = identifier;
             this.AssignToExpr = null;

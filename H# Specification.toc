@@ -1,14 +1,14 @@
 \babel@toc {english}{}
 \contentsline {section}{Abstract}{1}{section*.2}%
 \contentsline {section}{Grammar}{2}{section*.4}%
-\contentsline {section}{Operational Semantics}{6}{section*.6}%
-\contentsline {subsubsection}{General Semantics}{6}{section*.8}%
-\contentsline {subsubsection}{Classes}{6}{section*.11}%
-\contentsline {subsubsection}{Objects}{6}{section*.13}%
-\contentsline {subsubsection}{Structs}{6}{section*.15}%
-\contentsline {subsubsection}{Union}{6}{section*.17}%
-\contentsline {subsubsection}{Enum}{6}{section*.19}%
-\contentsline {subsubsection}{Traits}{6}{section*.21}%
-\contentsline {section}{Type Semantics}{7}{section*.23}%
-\contentsline {section}{Compilation Semantics}{8}{section*.27}%
-\contentsline {section}{Bytecode Semantics}{9}{section*.29}%
+\contentsline {section}{Operational Semantics}{7}{section*.6}%
+\contentsline {subsubsection}{General Semantics}{7}{section*.8}%
+\contentsline {subsubsection}{Classes}{7}{section*.11}%
+\contentsline {subsubsection}{Objects}{7}{section*.13}%
+\contentsline {subsubsection}{Structs}{7}{section*.15}%
+\contentsline {subsubsection}{Union}{7}{section*.17}%
+\contentsline {subsubsection}{Enum}{7}{section*.19}%
+\contentsline {subsubsection}{Traits}{7}{section*.21}%
+\contentsline {section}{Type Semantics}{8}{section*.23}%
+\contentsline {section}{Compilation Semantics}{9}{section*.27}%
+\contentsline {section}{Bytecode Semantics}{10}{section*.29}%

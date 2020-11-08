@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
-using HSharp.Parsing.AbstractSnyaxTree.Expression;
 
-namespace HSharp.Parsing.AbstractSnyaxTree {
+namespace HSharp.Parsing.AbstractSnyaxTree.Expression {
     
     public interface IGroupedASTNode : IExpr {
 

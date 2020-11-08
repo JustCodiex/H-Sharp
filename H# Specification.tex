@@ -115,7 +115,7 @@ This document will also contain the byte-instruction semantics. The official com
 \newsection{Grammar}
 The offical H\# grammar. Note: $Id$ $\in$ \textsc{VarEnv} and $TypeId$ $\in$ \textsc{TypeEnv}. Both refer to the same grammatical definition, defined by the regular expression:
 $$(\glit{_}|[\glit{a}-\glit{Z}])^+(\glit{_}|[\glit{0}-\glit{9}]|[\glit{a}-\glit{Z}])^*$$
-If multiple elements can occur - and it'd be convenient, the element be sufficed with 'n' to show it may be contain n of such elements. $n\in\{0,1,2,\dots\}$. The notation $e_0\glit{,}\dots\glit{,}e_n$ represents the 1 to nth element with a specific separator. The full grammar is defined as follows:
+If multiple elements can occur - and it'd be convenient, the element may be suffixed with 'n' to show it may contain n of such elements. $n\in\{0,1,2,\dots\}$. The notation $e_0\glit{,}\dots\glit{,}e_n$ represents the one to nth element with a specific separator. The full grammar is defined as follows:
 \begin{grammar}
 
 	\gtext{CompileUnit} ::= $CompileUnitElement$
@@ -132,7 +132,7 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\alt $Expr$ $BinaryOp$ $Expr$ | $UnaryOp$ $Expr$ | $Id$ $UnaryOp$
 	\alt $Expr$ \glit{?} $Expr$ \glit{:} $Expr$
 	\alt $Id$ | $Name$ | \glit{this} | \glit{base}
-	\alt $Expr$\glit{(}$Argument$\glit{)}
+	\alt $Expr$\glit{(}$Argument$\glit{)} | $Expr$\glit{[}$Expr$\glit{]}
 	\alt \glit{new} $TypeId$\glit{(}$Argument$\glit{)} | \glit{new} $TypeId$\glit{[}$Argument$\glit{]}
 	\alt $Expr$\glit{.}$Id$ | $Expr$\glit{?.}$Id$ 
 	\alt $Expr$\glit{.}$Id$\glit{(}$Argument$\glit{)} | $Expr$\glit{?.}$Id$\glit{(}$Argument$\glit{)}
@@ -220,6 +220,8 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\gtext{TraitDecl} ::= \glit{trait} $Id$ $ClassBody$
 	\alt $AccessMod$ \glit{trait} $Id$ $ClassBody$
 	
+	\gtext{TraitUniversal} ::= \glit{trait} $TypeId$ \glit{for} $TypeId$ $Scope$
+	
 	\gtext{ClassBody} ::= \glit{;} | \glit{\{} $ClassMember$ \glit{\}}
 	
 	\gtext{ClassMember} ::= $ClassMember$ $ClassMember$
@@ -231,13 +233,19 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\newpage	
 	
 	\gtext{VarDecl} ::= $TypeId$ $Id$ \glit{=} $Expr$ | $StorageMod$ $TypeId$ $Id$ \glit{=} $Expr$
+	\alt $TypeId$\glit{[]} $Id$ \glit{=} $Expr$ | $StorageMod$ $TypeId$\glit{[]} $Id$ \glit{=} $Expr$
+	\alt $TypeId$\glit{[]} $Id$ \glit{=} $ValueListInitializer$ | $StorageMod$ $TypeId$\glit{[]} $Id$ \glit{=} $ValueListInitializer$
 	\alt \glit{var} $Id$ \glit{=} $Expr$ | $StorageMod$ \glit{var} $Id$ \glit{=} $Expr$
+	\alt \glit{var} $Id$ \glit{=} $Initializer$ | $StorageMod$ \glit{var} $Id$ \glit{=} $Initializer$
 	\alt $TypeId$ $Id$ | $StorageMod$ $TypeId$ $Id$
+	\alt $TypeId$\glit{[]} $Id$ | $StorageMod$ $TypeId$\glit{[]} $Id$
 	\alt $LambdaType$ $Id$ \glit{=} $LambdaExpr$
 	\alt $TupleDecl$
 
 	\gtext{TupleDecl} ::= \glit{(}$ParamType$\glit{)} $Id$ \glit{=} \glit{(}$Argument$\glit{)}
 	\alt \glit{(}$Param$\glit{)} \glit{=} \glit{(}$Argument$\glit{)}
+	\alt \glit{(}$ParamType$\glit{)[]} $Id$ \glit{=} $Expr$
+	\alt \glit{(}$Param$\glit{)[]} $Id$ \glit{=} $Expr$
 
 	\gtext{FuncDecl} ::=  $Id$\glit{(}$FuncParam$\glit{):} $TypeId$ $FuncBody$ % Const-unassignable
 	\alt $AccessMod$ $Id$\glit{(}$FuncParam$\glit{):} $TypeId$ $FuncBody$ % Const-unassignable
@@ -266,6 +274,19 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	
 	\gtext{EnumMember} ::=  $EnumMember$\glit{,} $EnumMember$
 	\alt $Id$ | $Id$ \glit{=} $LiteralNoNull$
+	
+	\newpage
+	
+	\gtext{Initializer} ::= $ValueListInitializer$ | \glit{\{} $KeyValueListElement$ \glit{\}}
+	\alt \glit{\{} $IdValueListElement$ \glit{\}}
+	
+	\gtext{ValueListInitializer} ::= \glit{\{} $ValueListElement$ \glit{\}}
+	
+	\gtext{ValueListElement} ::= $Expr$ | $ValueListElement$\glit{,} $ValueListElement$
+	
+	\gtext{IdValueListElement} :: $Id$ \glit{=} $Expr$ | $IdValueListElement$\glit{,} $IdValueListElement$
+	
+\gtext{KeyValueListElement} :: \glit{[}$Expr$\glit{]} \glit{=} $Expr$ | $KeyValueListElement$\glit{,} $KeyValueListElement$	
 	
 	\gtext{Modifier} ::= $StorageMod$ | $AccessMod$ | $TypeMod$ | $CompilerHintMod$ | $\epsilon$
 	\alt $AccessMod$ $StorageMod$ | $AccessMod$ \glit{abstract} \glit{variant}
@@ -296,8 +317,6 @@ If multiple elements can occur - and it'd be convenient, the element be sufficed
 	\gtext{Argument} ::= $Expr$ | $Expr$\glit{,} $Expr$
 	
 	\gtext{Name} ::= $Id$ | $Name$\glit{.}$Name$	
-	
-	\gtext{TraitUniversal} ::= \glit{trait} $TypeId$ \glit{for} $TypeId$ $Scope$
 	
 	\gtext{BinaryOp} ::= \glit{+} | \glit{-} | \glit{*} | \glit{/} | \glit{\%} | \glit{\textless} | \glit{\textgreater} | \glit{\textless}= | \glit{\textgreater}= | \glit{==} | \glit{!=}
 	\alt \glit{\textbar\textbar} | $\&\&$ | \glit{\textbar} | $\&$ | \glit{\textless\textless} | \glit{\textgreater\textgreater} | \glit{=>} | \glit{::} | \glit{??} | \glit{..}

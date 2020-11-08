@@ -24,15 +24,29 @@
         /// Check if object is of type TElse.
         /// </summary>
         /// <typeparam name="TElse">The type to check.</typeparam>
-        /// <returns>Self with internal flag flipped if true.</returns>
+        /// <returns>Self with internal flag flipped if <see langword="true"/>.</returns>
         public IsType<T> Is<TElse>() => this.Or<TElse>() ? this.Yes() : this;
 
         /// <summary>
         /// Check if the object is otherwise of type TElse.
         /// </summary>
         /// <typeparam name="TElse">The type to check.</typeparam>
-        /// <returns>True if any type matched throughout the chain or is of type TElse. Otherwise false.</returns>
+        /// <returns><see langword="true"/> if any type matched throughout the chain or is of type TElse. Otherwise <see langword="false"/>.</returns>
         public bool Or<TElse>() => this.m_testee is TElse || this.m_any;
+
+        /// <summary>
+        /// Check if the object is otherwise of type TElse and get result of last operation.
+        /// </summary>
+        /// <remarks>
+        /// It's recommended to only use this in a Is().Or() case!
+        /// </remarks>
+        /// <typeparam name="TElse">The type to check.</typeparam>
+        /// <param name="lastTrue">A <see cref="bool"/> <see langword="out"/> variable marking whether this instance was true.</param>
+        /// <returns><see langword="true"/> if any type matched throughout the chain or is of type TElse. Otherwise <see langword="false"/>.</returns>
+        public bool Or<TElse>(out bool lastTrue) {
+            lastTrue = this.m_testee is TElse;
+            return this.Or<TElse>();
+        }
 
     }
 

@@ -10,6 +10,8 @@ namespace HSharp.Analysis.TypeData {
 
         public override ushort Size { get; }
 
+        public bool IsPrimitive => false;
+
         public IExtendableType Base { get; }
 
         public bool IsExtensionOf(IExtendableType type) => throw new NotImplementedException();

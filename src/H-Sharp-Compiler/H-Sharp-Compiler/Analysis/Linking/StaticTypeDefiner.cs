@@ -4,6 +4,7 @@ using HSharp.IO;
 using HSharp.Parsing.AbstractSnyaxTree;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
+using HSharp.Parsing.AbstractSnyaxTree.Type;
 
 namespace HSharp.Analysis.Linking {
     

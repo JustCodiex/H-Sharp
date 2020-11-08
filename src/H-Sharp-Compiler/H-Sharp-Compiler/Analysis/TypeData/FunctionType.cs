@@ -17,6 +17,7 @@ namespace HSharp.Analysis.TypeData {
         public FuncDeclNode Origin { get; }
 
         public SourcePosition CodeOrigin => this.Origin.Pos;
+        public bool IsPrimitive => false;
 
         public bool IsMethod => this.Owner is null;
 

@@ -1,6 +1,6 @@
 ﻿using HSharp.Parsing.AbstractSnyaxTree.Expression;
 
-namespace HSharp.Parsing.AbstractSnyaxTree {
+namespace HSharp.Parsing.AbstractSnyaxTree.Type {
     
     public class TypeCtorNode : ASTNode, ITypeIdentifier {
     

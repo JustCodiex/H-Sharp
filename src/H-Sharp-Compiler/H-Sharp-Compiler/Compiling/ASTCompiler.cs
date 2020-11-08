@@ -8,6 +8,10 @@ using HSharp.Parsing.AbstractSnyaxTree.Declaration;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
 using HSharp.Parsing.AbstractSnyaxTree.Literal;
 using HSharp.Parsing.AbstractSnyaxTree.Statement;
+using HSharp.Parsing.AbstractSnyaxTree.Initializer;
+using HSharp.Compiling.Hint;
+using HSharp.Analysis.TypeData;
+using ValueType = HSharp.Analysis.TypeData.ValueType;
 
 namespace HSharp.Compiling {
 
@@ -15,6 +19,7 @@ namespace HSharp.Compiling {
 
         private AST[] m_asts;
         private CompiledFunction[] m_compiledFuncs;
+        private CompileContext m_context;
 
         public ASTCompiler(AST[] asts) {
             this.m_asts = asts;
@@ -37,8 +42,8 @@ namespace HSharp.Compiling {
                     offset += instruction.GetSize();
                 }
 
-                long remainder = offset % 4;
-                if (remainder != 0) {
+                long remainder = offset % 8;
+                if (remainder > 0) {
                     for (int j = 0; j < remainder; j++) {
                         allInstructions.Add(new ByteInstruction(Bytecode.NOP));
                     }
@@ -47,16 +52,20 @@ namespace HSharp.Compiling {
 
             }
 
+            // Set instructions, offsets, bytes and strings
             program.SetInstructions(allInstructions.ToArray());
             program.SetOffsets(offsets, offset);
+            program.SetBytes(this.m_context.ConstBytes);
+            program.SetStrings(this.m_context.Strings);
 
+            // Set program
             return program;
 
         }
 
         public CompileResult Compile() {
 
-            foreach (AST ast in this.m_asts) {
+            foreach (AST ast in this.m_asts) { // TODO: Merge into one
                 CompileResult cResult = this.CompileAst(ast);
                 if (!cResult) {
                     return cResult;
@@ -98,6 +107,7 @@ namespace HSharp.Compiling {
             compiledInstructions.Add(topLevelFunc);
 
             this.m_compiledFuncs = compiledInstructions.ToArray();
+            this.m_context = context;
 
             return new CompileResult(true);
 
@@ -167,6 +177,8 @@ namespace HSharp.Compiling {
                 MemberAccessNode accessNode => this.CompileMemberAccessNode(accessNode, context),
                 ReturnStatement returnNode => this.CompileNode(returnNode.Expression as ASTNode, context),
                 NewObjectNode newObjNode => this.CompileNewObject(newObjNode, context),
+                ValueListInitializerNode valListNode => this.CompileValueListInitializer(valListNode, context),
+                LookupNode lookupNode => this.CompileLookupNode(lookupNode, context),
                 _ => throw new NotImplementedException(),
             };
             return instructions;
@@ -176,7 +188,9 @@ namespace HSharp.Compiling {
             List<ByteInstruction> instructions = new List<ByteInstruction>();
             instructions.AddRange(this.CompileNode(op.Left, context));
             instructions.AddRange(this.CompileNode(op.Right, context));
-            if (!context.Result) { return null; }
+            if (!context.Result) { 
+                return null; 
+            }
             Bytecode bytecode = op.Content switch
             {
                 "+" => Bytecode.ADD,
@@ -283,6 +297,56 @@ namespace HSharp.Compiling {
             return instructions;
         }
 
+        private List<ByteInstruction> CompileValueListInitializer(ValueListInitializerNode valListNode, CompileContext context) {
+
+            var instructions = new List<ByteInstruction>();
+            var typeHint = valListNode.GetHint(CompileHintType.TypeHint);
+            var suggestedType = typeHint.HasValue ? typeHint.Value.Args[0] as IValType : null;
+
+            if (suggestedType?.IsPrimitive ?? false) {
+
+                bool isConst = valListNode.All(x => x is ILiteral);
+
+                if (isConst && suggestedType is ValueType vType) {
+
+                    byte[] content = CompileHelper.ToByteArray(vType, valListNode);
+
+                    int length = valListNode.Length;
+                    int count = length * vType.Size;
+                    int start = context.AddConstBytes(content);
+
+                    instructions.Add(new ByteInstruction(Bytecode.NEWARRAY, length, vType.ToString()));
+                    instructions.Add(new ByteInstruction(Bytecode.CCPY, start, count));
+
+                } else {
+                    
+                    throw new NotImplementedException();
+
+                }
+
+            } else {
+
+                throw new NotImplementedException();
+
+            }
+
+            return instructions;
+
+        }
+
+        private List<ByteInstruction> CompileLookupNode(LookupNode lookupNode, CompileContext context) {
+
+            var instructions = this.CompileNode(lookupNode.Left as ASTNode, context);
+
+            foreach (ASTNode node in lookupNode.Index.Nodes) {
+                instructions.AddRange(this.CompileNode(node, context));
+            }
+
+            instructions.Add(new ByteInstruction(Bytecode.LOADELM, lookupNode.Index.Nodes.Count));
+
+            return instructions;
+
+        }
 
     }
 

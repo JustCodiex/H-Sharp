@@ -1,0 +1,11 @@
+public class A(int x, int y);
+
+A a(1,1); // Would expand to A a = new A(1,1)
+
+public class B {
+	public B(int x, int y) {
+		// ....	
+	}
+}
+
+B b(2,2); // Would also expand to B b = new B(1,1)

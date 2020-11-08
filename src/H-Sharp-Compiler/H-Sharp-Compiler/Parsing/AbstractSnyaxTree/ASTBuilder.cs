@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using HSharp.IO;
 using HSharp.Language;
+using HSharp.Language.Behaviour;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
 using HSharp.Parsing.AbstractSnyaxTree.Directive;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
+using HSharp.Parsing.AbstractSnyaxTree.Initializer;
 using HSharp.Parsing.AbstractSnyaxTree.Literal;
 using HSharp.Parsing.AbstractSnyaxTree.Statement;
+using HSharp.Parsing.AbstractSnyaxTree.Type;
 using HSharp.Util;
 using HSharp.Util.Functional;
 
@@ -105,46 +108,35 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
         private void ApplyOrderOfOperations(List<ASTNode> nodes) { // AKA operator presedence
 
-            Type binOp = typeof(BinOpNode);
-            Type unOp = typeof(UnaryOpNode);
-            Type memAccessOp = typeof(MemberAccessNode);
-            (Type, string)[][] opTypes = new (Type, string)[][] {
-                new (Type, string)[] { (memAccessOp, ".") },
-                new (Type, string)[] { (binOp, "*"), (binOp, "/") },
-                new (Type, string)[] { (binOp, "&") },
-                new (Type, string)[] { (unOp, "++"), (unOp, "--") },
-                new (Type, string)[] { (binOp, "+"), (binOp, "-") },
-                new (Type, string)[] { (binOp, "=") }
-            }; // TODO: Add custom OperatorBehaviour type to better handle syntax errors etc...
+            IOperatorBehaviour[][] order = new IOperatorBehaviour[][] {
+                new IOperatorBehaviour[] { new IndexLookupOperatorBehaviour("[]") },
+                new IOperatorBehaviour[] { new MemberAccessBehaviour(".") },
+                new IOperatorBehaviour[] { new BinaryOperatorBehaviour("*"), new BinaryOperatorBehaviour("/") },
+                //new IOperatorBehaviour[] { new UnaryPreOperatorBehaviour("++"), new UnaryPreOperatorBehaviour("--") },
+                //new IOperatorBehaviour[] { new UnaryPostOperatorBehaviour("++"), new UnaryPostOperatorBehaviour("--") },
+                new IOperatorBehaviour[] { new BinaryOperatorBehaviour("+"), new BinaryOperatorBehaviour("-") },
+                new IOperatorBehaviour[] { new BinaryOperatorBehaviour("=") },
+            };
 
-            for (int i = 0; i < opTypes.Length; i++) {
+            LexTokenType[] operatorTokenTypes = new LexTokenType[] {
+                LexTokenType.Operator,
+                LexTokenType.IndexerStart,
+            };
+            
+            for (int i = 0; i < order.Length; i++) {
 
-                var ops = opTypes[i];
+                var ops = order[i];
 
                 int j = 0;
                 while (j < nodes.Count) {
-                    if (nodes[j].LexicalType == LexTokenType.Operator && ops.Any(x => x.Item2 == nodes[j].Content)) {
-                        var m = ops.First(x => x.Item2 == nodes[j].Content);
+                    if (operatorTokenTypes.Any(x => x == nodes[j].LexicalType) && ops.Any(x => x.IsOperatorSymbol(nodes[j].Content))) {
+                        var m = ops.First(x => x.IsOperatorSymbol(nodes[j].Content));
                         bool pre = j - 1 >= 0;
                         bool post = j + 1 < nodes.Count;
-                        if (m.Item1 == binOp && pre && post) {
-                            BinOpNode binaryOperation = new BinOpNode(nodes[j].Pos, nodes[j - 1], nodes[j].Content, nodes[j + 1]);
-                            this.ApplyOrderOfOperationsBinary(binaryOperation);
-                            nodes[j - 1] = binaryOperation;
-                            nodes.RemoveAt(j + 1);
-                            nodes.RemoveAt(j);
-                            continue;
-                        } else if (m.Item1 == unOp) {
-                            throw new NotImplementedException();
-                            //continue;
-                        } else if (m.Item1 == memAccessOp && pre && post && nodes[j - 1].Is<IdentifierNode>().Is<ThisNode>().Or<MemberAccessNode>() && nodes[j+1] is IdentifierNode accessId) {
-                            IExpr accessExpr = nodes[j - 1] as IExpr;
-                            nodes[j - 1] = new MemberAccessNode(accessExpr, accessId, m.Item2, nodes[j].Pos);
-                            nodes.RemoveAt(j + 1);
-                            nodes.RemoveAt(j);
-                            continue;
-                        } else {
-                            throw new NotImplementedException();
+                        if (m.IsLegalWhen(pre, post) && m.IsLegalPreAndPostCondition(nodes, j)) {
+                            if (m.ApplyBehaviour(nodes, j, this.ApplyOrderOfOperations)) {
+                                continue;
+                            }
                         }
                     }
                     j++;
@@ -161,16 +153,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
         }
 
-        private void ApplyOrderOfOperationsBinary(BinOpNode binOpNode) {
-            if (binOpNode.Left is IGroupedASTNode leftGroup) {
-                this.ApplyOrderOfOperations(leftGroup.Nodes);
-            }
-            if (binOpNode.Right is IGroupedASTNode rightGroup) {
-                this.ApplyOrderOfOperations(rightGroup.Nodes);
-            }
-        }
-
-        private void ApplyGrammar(List<ASTNode> nodes, int from = 0, params GrammarRule[] additionalPatterns) {
+        private void ApplyGrammar(List<ASTNode> nodes, int from = 0, bool allowNoSemicolon = false, params GrammarRule[] additionalPatterns) {
 
             int i = from;
             while (i < nodes.Count) {
@@ -208,33 +191,38 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                             throw new NotImplementedException();
                     }
                 } else if (TypeSequence<ASTNode, IdentifierNode, IdentifierNode, SeperatorNode>.Match(nodes, i)) { // int x;
-                    
+
                     this.ApplyModifierGrammar(nodes, ref i, out AccessModifierNode accessModifier, out HashSet<StorageModifierNode> storageModifiers);
-                    
-                    nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i], nodes[i+1].Content);
+
+                    nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i].ToTypeIdentifier(), nodes[i + 1].Content);
                     this.ApplyModifiers(nodes[i] as VarDeclNode, accessModifier, storageModifiers);
                     this.RemoveNode(nodes, i + 1, 2);
 
-                } else if (TypeSequence<ASTNode, IdentifierNode, BinOpNode, SeperatorNode>.Match(nodes, i)) { // int x = <expr>;
-                    
+                } else if (TypeSequence<ASTNode, IdentifierNode, BinOpNode, SeperatorNode>.Match(nodes, i) || TypeSequence<ASTNode, TypeArrayIdentifierNode, BinOpNode, SeperatorNode>.Match(nodes, i)) {  // int x = <expr>; OR int[] x = <expr>;
+
                     this.ApplyModifierGrammar(nodes, ref i, out AccessModifierNode accessModifier, out HashSet<StorageModifierNode> storageModifiers);
-                    
+
                     BinOpNode assignOp = nodes[i + 1] as BinOpNode;
                     if (assignOp.Op.CompareTo("=") == 0) {
+                        if (assignOp.Right is ScopeNode initializer) {
+                            if (this.ApplyInitializerGrammar(initializer, out IInitializer init)) {
+                                assignOp.Update(BinOpNode.OpSide.RHS, init as ASTNode);
+                            }
+                        }
                         this.ApplyGrammarBinary(assignOp);
-                        nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i], assignOp);
+                        nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i].ToTypeIdentifier(), assignOp);
                         this.ApplyModifiers(nodes[i] as VarDeclNode, accessModifier, storageModifiers);
                         this.RemoveNode(nodes, i + 1, 2);
                     }
 
                 } else if (TypeSequence<ASTNode, IdentifierNode, BinOpNode, IdentifierNode, ExpressionNode, SeperatorNode>.Match(nodes, i)) {
-                    
+
                     this.ApplyModifierGrammar(nodes, ref i, out AccessModifierNode accessModifier, out HashSet<StorageModifierNode> storageModifiers);
-                    
+
                     BinOpNode assignOp = nodes[i + 1] as BinOpNode;
                     if (assignOp.Right.LexicalType == LexTokenType.Keyword && assignOp.Right.Is("new")) { // Klass k = new Klass();
                         NewObjectNode newObjectNode = new NewObjectNode(new TypeIdentifierNode(nodes[i + 2] as IdentifierNode), nodes[i + 3] as ExpressionNode, assignOp.Right.Pos);
-                        nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i], new BinOpNode(assignOp.Pos, assignOp.Left, "=", newObjectNode));
+                        nodes[i] = new VarDeclNode(nodes[i].Pos, nodes[i].ToTypeIdentifier(), new BinOpNode(assignOp.Pos, assignOp.Left, "=", newObjectNode));
                         this.ApplyModifiers(nodes[i] as VarDeclNode, accessModifier, storageModifiers);
                         this.RemoveNode(nodes, i + 1, 4);
                     } // else error?
@@ -245,7 +233,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                     }
                 } else if (TypeSequence<ASTNode, IExpr, ExpressionNode>.Match(nodes, i)) {
                     ExpressionNode groupNode = nodes[i + 1] as ExpressionNode;
-                    this.ApplyGrammar(groupNode.Nodes); // apply grammar on arguments ==> should lead to a nice arg1,arg2,arg3 setup (otherwise error)
+                    this.ApplyGrammar(groupNode.Nodes, 0, true); // apply grammar on arguments ==> should lead to a nice arg1,arg2,arg3 setup (otherwise error)
                     CallNode callNode = new CallNode(nodes[i], nodes[i].Pos) {
                         Arguments = new ArgumentsNode(groupNode) // Note: This constructor will apply the grammar rule on its own
                     };
@@ -256,11 +244,13 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                     nodes[i] = callNode;
                 } else if (nodes[i] is IGroupedASTNode groupNode) {
                     this.ApplyGrammar(groupNode.Nodes);
+                } else {
+                    ApplySingleNodeGrammar(nodes[i]);
                 }
 
                 if (nodes[i] is IExpr && i + 1 < nodes.Count && nodes[i+1] is SeperatorNode sepNode && sepNode.Content.CompareTo(";") == 0) {
                     this.RemoveNode(nodes, i + 1);
-                } else if (nodes[i] is IExpr && i + 1 >= nodes.Count) {
+                } else if (nodes[i] is IExpr && i + 1 >= nodes.Count && nodes.Count > 1 && !allowNoSemicolon) {
                     throw new SyntaxError(100, nodes[i].Pos, $"Expected ';' found <EOL>");
                 }
 
@@ -270,12 +260,51 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
         }
 
+        private void ApplySingleNodeGrammar(ASTNode node) {
+            if (node is BinOpNode binop) {
+                this.ApplyGrammarBinary(binop);
+            } else if (node is LookupNode lookupNode) {
+                this.ApplyGrammar(lookupNode.Index.Nodes);
+            }
+        }
+
         private void ApplyGrammarBinary(BinOpNode binop) {
             if (binop.Left is IGroupedASTNode leftGroup) {
                 this.ApplyGrammar(leftGroup.Nodes);
+            } else {
+                this.ApplySingleNodeGrammar(binop.Left);
             }
             if (binop.Right is IGroupedASTNode rightGroup) {
                 this.ApplyGrammar(rightGroup.Nodes);
+            } else {
+                this.ApplySingleNodeGrammar(binop.Right);
+            }
+        }
+
+        private bool ApplyInitializerGrammar(ScopeNode initializer, out IInitializer initNode) {
+            initNode = null;
+            List<ASTNode> all = new List<ASTNode>();
+            List<ASTNode> buffer = new List<ASTNode>();
+            for (int i = 0; i < initializer.Size; i++) {
+                if (initializer[i].LexicalType == LexTokenType.Separator && initializer[i].Content.CompareTo(",") == 0) {
+                    //this.ApplyGrammar(buffer, 0); // TODO: Fix bug with EOL
+                    all.AddRange(buffer);
+                    all.Add(initializer[i]);
+                    buffer.Clear();
+                } else {
+                    buffer.Add(initializer[i]);
+                }
+            }
+            if (buffer.Count != 0) {
+                all.AddRange(buffer);
+            } // else some error (unless the whole initializer is empty)
+            if (all.IsTrueForAll(i => i % 2 == 0 ? (all[i] is ILiteral || all[i] is IdentifierNode) : all[i] is SeperatorNode)) {
+                var node = new ValueListInitializerNode(initializer.Pos);
+                all.ForEach(x => x.IfTrue(y => y is ILiteral || y is IdentifierNode, y => node.Value(y as IExpr)));
+                initNode = node;
+                return true;
+            } else {
+                return false;
             }
         }
 
@@ -462,7 +491,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
                 ScopeNode classBody = nodes[from + 2] as ScopeNode;
 
-                this.ApplyGrammar(classBody.Nodes, 0, ClassCtorPattern);
+                this.ApplyGrammar(classBody.Nodes, 0, false, ClassCtorPattern);
 
                 for (int i = 0; i < classBody.Size; i++) {
 
@@ -502,7 +531,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                 // Loop through paremeters and register them as fields
                 foreach (ParamsNode.ParameterNode p in classParams.Parameters) {
                     // do check if property and such...
-                    classDecl.Fields.Add(new VarDeclNode(p.Pos, p.Type, p.Identifier.Content));
+                    classDecl.Fields.Add(new VarDeclNode(p.Pos, p.Type.ToTypeIdentifier(), p.Identifier.Content));
                 }
 
                 // Set remove parameters

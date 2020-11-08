@@ -8,6 +8,8 @@
 
         public override bool IsReferenceType => false;
 
+        public bool IsPrimitive => true;
+
         public override ushort Size => 0;
 
         public override string Name => "void";

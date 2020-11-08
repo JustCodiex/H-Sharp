@@ -9,9 +9,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Expression {
 
         public List<ASTNode> Nodes => this.m_nodes;
 
-        public IndexerNode(SourcePosition position) : base(position, "[]", LexTokenType.None) {
-
-        }
+        public IndexerNode(SourcePosition position) : base(position, "[]", LexTokenType.IndexerStart) {}
 
         public void SetNodes(List<ASTNode> nodes) => this.m_nodes = nodes;
 

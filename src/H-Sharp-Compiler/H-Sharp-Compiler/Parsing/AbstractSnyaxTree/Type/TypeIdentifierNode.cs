@@ -1,11 +1,13 @@
 ﻿using HSharp.IO;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
 
-namespace HSharp.Parsing.AbstractSnyaxTree {
+namespace HSharp.Parsing.AbstractSnyaxTree.Type {
     
     public class TypeIdentifierNode : ASTNode, ITypeIdentifier {
 
         private MemberAccessNode m_subExpr;
+
+        public bool IsNextedTypeIdentifier => this.m_subExpr is not null;
 
         public TypeIdentifierNode(string typename, SourcePosition position) : base(position, typename, LexTokenType.Identifier) {
             this.m_subExpr = null;

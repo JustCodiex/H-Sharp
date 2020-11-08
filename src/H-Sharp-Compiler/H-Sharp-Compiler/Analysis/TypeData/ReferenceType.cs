@@ -12,10 +12,9 @@ namespace HSharp.Analysis.TypeData {
 
         public HSharpType ReferencedType { get; }
 
+        public bool IsPrimitive => false;
+
         public ReferenceType(HSharpType refType) {
-            if (refType is not IRefType) {
-                throw new ArgumentException();
-            }
             this.ReferencedType = refType;
         }
 

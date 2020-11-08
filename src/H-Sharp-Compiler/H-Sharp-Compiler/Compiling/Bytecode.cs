@@ -19,6 +19,9 @@
         STOREFLD,
         LOADFLD,
 
+        STOREELM,
+        LOADELM,
+
         PUSH,
         PUSHCLOSURE,
         POP,
@@ -30,6 +33,11 @@
         VINVOKE, // member virtual call
 
         NEW,
+        NEWARRAY,
+
+        CCPY, // const-copy [start, count]
+                // pop array and copy into
+                // then push back unto stack
 
         // LC = Load Const
         LCSI16,

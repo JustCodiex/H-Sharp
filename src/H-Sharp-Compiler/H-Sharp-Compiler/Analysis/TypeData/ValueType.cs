@@ -8,9 +8,12 @@
 
         public override ushort Size { get; }
 
-        public ValueType(string name, ushort size) {
+        public bool IsPrimitive { get; }
+
+        public ValueType(string name, ushort size, bool isPrimitive = false) {
             this.Name = name;
             this.Size = size;
+            this.IsPrimitive = isPrimitive;
         }
 
         public override string ToString() => this.Name;

@@ -52,9 +52,9 @@ namespace HSharp.Analysis {
 
             // Create domain
             NamespaceDomain globDom = new NamespaceDomain("global", null);
-            globDom.AddSubdomain(new ValueType("bool", sizeof(bool)));
-            globDom.AddSubdomain(new ValueType("int", sizeof(int)));
-            globDom.AddSubdomain(new ValueType("float", sizeof(float)));
+            globDom.AddSubdomain(new ValueType("bool", sizeof(bool), true));
+            globDom.AddSubdomain(new ValueType("int", sizeof(int), true));
+            globDom.AddSubdomain(new ValueType("float", sizeof(float), true));
 
             // Return domain
             return globDom;

@@ -1,4 +1,5 @@
 ﻿using HSharp.IO;
+using HSharp.Parsing.AbstractSnyaxTree.Type;
 
 namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
 

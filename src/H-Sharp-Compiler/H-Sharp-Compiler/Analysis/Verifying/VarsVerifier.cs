@@ -4,6 +4,7 @@ using HSharp.Metadata;
 using HSharp.Parsing.AbstractSnyaxTree;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
+using HSharp.Parsing.AbstractSnyaxTree.Initializer;
 using HSharp.Parsing.AbstractSnyaxTree.Literal;
 using HSharp.Parsing.AbstractSnyaxTree.Statement;
 using HSharp.Util;
@@ -99,6 +100,15 @@ namespace HSharp.Analysis.Verifying {
                     break;
                 case ReturnStatement returnStatementNode:
                     this.VarsNode(returnStatementNode.Expression as ASTNode, scope);
+                    break;
+                case ValueListInitializerNode valListInitNode:
+                    foreach (IExpr valNode in valListInitNode) {
+                        this.VarsNode(valNode as ASTNode, scope);
+                    }
+                    break;
+                case LookupNode lookupNode:
+                    this.VarsNode(lookupNode.Index, scope);
+                    this.VarsNode(lookupNode.Left as ASTNode, scope);
                     break;
                 case ThisNode:
                 case BaseNode:

@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using HSharp.Compiling.Hint;
 using HSharp.Analysis.TypeData;
 using HSharp.Parsing.AbstractSnyaxTree;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
+using HSharp.Parsing.AbstractSnyaxTree.Initializer;
 using HSharp.Parsing.AbstractSnyaxTree.Literal;
 using HSharp.Parsing.AbstractSnyaxTree.Statement;
+using HSharp.Parsing.AbstractSnyaxTree.Type;
 using HSharp.Util.Functional;
 using ValueType = HSharp.Analysis.TypeData.ValueType;
 
@@ -47,8 +50,11 @@ namespace HSharp.Analysis.Typechecking {
             CallNode callNode => this.TypecheckCallOperation(callNode, tenv, domain),
             ScopeNode scope => this.TypecheckScope(scope, tenv, domain).Select(x => x, y => y[^1]),
             ExpressionNode expr => this.TypecheckExpressionOperation(expr, tenv, domain),
+            ValueListInitializerNode vListNode => this.TypecheckValListInitOperation(vListNode, tenv, domain),
+            LookupNode lookupNode => this.TypecheckLookupOperation(lookupNode, tenv, domain),
+            IndexerNode indexerNode => this.TypecheckIndexerOperation(indexerNode, tenv, domain),
             ILiteral lit => this.TypecheckConstOperation(lit, domain),
-            _ => (new CompileResult(false, $"Unsupported compile element '{node.NodeType}'").SetOrigin(node), null),
+            _ => (new CompileResult(false, $"Unsupported type-checkable element '{node.NodeType}'").SetOrigin(node), null),
         };
 
         private (CompileResult, IValType) TypecheckClassDeclOperation(ClassDeclNode classDecl, TypeEnvironment tenv, Domain domain) {
@@ -126,7 +132,7 @@ namespace HSharp.Analysis.Typechecking {
 
         private (CompileResult, IValType) TypecheckVardeclOperation(VarDeclNode varDecl, TypeEnvironment tenv, Domain domain) {
 
-            IValType declType = this.TypeOf(varDecl.TypeExpr.ToString(), domain);
+            IValType declType = this.TypeOf(varDecl.TypeExpr as ITypeIdentifier, domain);
 
             (CompileResult result, IValType exprType) = varDecl.AssignToExpr is null ? (new CompileResult(true), declType) : this.TypecheckNode(varDecl.AssignToExpr, tenv, domain);
             if (!result) {
@@ -348,8 +354,49 @@ namespace HSharp.Analysis.Typechecking {
 
             return (new CompileResult(true), last);
 
+        }
+
+        private (CompileResult, IValType) TypecheckValListInitOperation(ValueListInitializerNode valListInitializerNode, TypeEnvironment tenv, Domain domain) {
+
+            IValType defType = null;
+            foreach (IExpr expr in valListInitializerNode) {
+                var result = this.TypecheckNode(expr as ASTNode, tenv, domain);
+                if (!result.Item1) {
+                    return result;
+                } else {
+                    if (defType == null) {
+                        defType = result.Item2;
+                    } else if (!this.IsSubtype(result.Item2, defType, out string s)) {
+                        return (new CompileResult(false, s).SetOrigin(expr as ASTNode), null);
+                    }
+                }
+            }
+
+            // Adding a small compiler hint
+            valListInitializerNode.AddCompilerHint(CompileHintType.TypeHint, defType);
+
+            return (new CompileResult(true), new ArrayType(defType as HSharpType));
 
         }
+
+        private (CompileResult, IValType) TypecheckLookupOperation(LookupNode lookupNode, TypeEnvironment tenv, Domain domain) {
+
+            var indexedResult = this.TypecheckNode(lookupNode.Index, tenv, domain);
+            var result = this.TypecheckNode(lookupNode.Left as ASTNode, tenv, domain);
+            if (result.Item2 is ArrayType array) {
+                if (indexedResult.Item2 == domain.Get<ValueType>("int")) {
+                    return (new CompileResult(true), this.TypeOf(array.ReferencedType));
+                } else {
+                    return (new CompileResult(false, "Invalid Indexing Type").SetOrigin(lookupNode), null);
+                }
+            } else {
+                return (new CompileResult(false, "Invalid Indexing Type").SetOrigin(lookupNode), null);
+            }
+
+        }
+
+        private (CompileResult, IValType) TypecheckIndexerOperation(IndexerNode indexerNode, TypeEnvironment tenv, Domain domain)
+            => this.TypecheckNode(indexerNode.Nodes[0], tenv, domain); // TODO: Make this more generic...
 
         private bool IsSubtype(IValType subType, IValType baseType, out string err) {
             if (subType is null || baseType is null) {
@@ -382,14 +429,22 @@ namespace HSharp.Analysis.Typechecking {
             return true;
         }
 
-        private IValType TypeOf(string typeId, Domain domain) {
-            HSharpType type = domain.First<HSharpType>(typeId);
+        private IValType TypeOf(ITypeIdentifier identifier, Domain domain) => identifier switch
+        {
+            TypeArrayIdentifierNode arrayIdentifierNode => new ArrayType(this.TypeOf(arrayIdentifierNode.EncapsulatedType, domain) as HSharpType),
+            _ => this.TypeOf(identifier.Content, domain)
+        };
+        
+
+        private IValType TypeOf(HSharpType type) {
             if (type is IRefType) {
                 return new ReferenceType(type);
             } else {
                 return type as IValType;
             }
         }
+
+        private IValType TypeOf(string typeId, Domain domain) => this.TypeOf(domain.First<HSharpType>(typeId));
 
         private IValType TypeOf(IExtendableType type) {
             if (type is ClassType klass) {
