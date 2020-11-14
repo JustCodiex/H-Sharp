@@ -47,6 +47,7 @@ namespace HSharp.Analysis.Typechecking {
             BaseNode baseNode => this.TypecheckBaseOperation(baseNode, tenv, domain),
             ReturnStatement returnStatement => this.TypecheckNode(returnStatement.Expression as ASTNode, tenv, domain),
             NewObjectNode newObject => this.TypecheckNewOperation(newObject, tenv, domain),
+            NewArrayNode newArray => this.TypecheckNewOperation(newArray, tenv, domain),
             CallNode callNode => this.TypecheckCallOperation(callNode, tenv, domain),
             ScopeNode scope => this.TypecheckScope(scope, tenv, domain).Select(x => x, y => y[^1]),
             ExpressionNode expr => this.TypecheckExpressionOperation(expr, tenv, domain),
@@ -132,7 +133,7 @@ namespace HSharp.Analysis.Typechecking {
 
         private (CompileResult, IValType) TypecheckVardeclOperation(VarDeclNode varDecl, TypeEnvironment tenv, Domain domain) {
 
-            IValType declType = this.TypeOf(varDecl.TypeExpr as ITypeIdentifier, domain);
+            IValType declType = this.TypeOf(varDecl.TypeExpr, domain);
 
             (CompileResult result, IValType exprType) = varDecl.AssignToExpr is null ? (new CompileResult(true), declType) : this.TypecheckNode(varDecl.AssignToExpr, tenv, domain);
             if (!result) {
@@ -264,6 +265,27 @@ namespace HSharp.Analysis.Typechecking {
                     return res;
                 }
             }
+
+            return (new CompileResult(true), type);
+
+        }
+
+        private (CompileResult, IValType) TypecheckNewOperation(NewArrayNode newArray, TypeEnvironment tenv, Domain domain) {
+
+            IValType type = this.TypeOf(new TypeArrayIdentifierNode(newArray.Type, newArray.Pos), domain);
+            if (type is null) {
+                return (new CompileResult(false, $"Undefined type '{newArray.Type}'").SetOrigin(newArray), null);
+            }
+
+            foreach (ASTNode arg in newArray.Indexer.Nodes) {
+                var res = this.TypecheckNode(arg, tenv, domain);
+                if (!res.Item1) {
+                    return res;
+                }
+            }
+
+            // Add compiler type hint
+            newArray.AddCompilerHint(CompileHintType.TypeHint, type);
 
             return (new CompileResult(true), type);
 

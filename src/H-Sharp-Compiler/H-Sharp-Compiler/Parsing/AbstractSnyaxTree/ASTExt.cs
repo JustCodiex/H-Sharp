@@ -14,6 +14,8 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
         public static ITypeIdentifier ToTypeIdentifier(this ASTNode node) => node switch
         {
             IdentifierNode id => new TypeIdentifierNode(id),
+            LookupNode lookup => (lookup.Left as ASTNode).ToTypeIdentifier(),
+            NewArrayNode arrNod => new TypeArrayIdentifierNode(arrNod.Type, arrNod.Pos),
             ITypeIdentifier => node as ITypeIdentifier,
             _ => throw new NotImplementedException(),
         };

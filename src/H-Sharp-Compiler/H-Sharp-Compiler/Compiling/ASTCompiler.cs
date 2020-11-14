@@ -169,6 +169,7 @@ namespace HSharp.Compiling {
                 BaseNode => Instruction(new ByteInstruction(Bytecode.PUSH, 0)),
                 IntLitNode intLitNode => this.CompileConstant(intLitNode),
                 IdentifierNode idNode => Instruction(new ByteInstruction(idNode.IsFuncIdentifier ? Bytecode.PUSHCLOSURE : Bytecode.PUSH, idNode.Index)),
+                AssignmentNode assignmentNode => this.CompileAssignmentOperation(assignmentNode, context),
                 BinOpNode binOpNode => this.CompileBinaryOperation(binOpNode, context),
                 VarDeclNode vDeclNode => this.CompileVariableDeclaration(vDeclNode, context),
                 CallNode callNode => this.CompileCallExpression(callNode, context),
@@ -177,6 +178,7 @@ namespace HSharp.Compiling {
                 MemberAccessNode accessNode => this.CompileMemberAccessNode(accessNode, context),
                 ReturnStatement returnNode => this.CompileNode(returnNode.Expression as ASTNode, context),
                 NewObjectNode newObjNode => this.CompileNewObject(newObjNode, context),
+                NewArrayNode newArrNode => this.CompileNewArray(newArrNode, context),
                 ValueListInitializerNode valListNode => this.CompileValueListInitializer(valListNode, context),
                 LookupNode lookupNode => this.CompileLookupNode(lookupNode, context),
                 _ => throw new NotImplementedException(),
@@ -184,14 +186,22 @@ namespace HSharp.Compiling {
             return instructions;
         }
 
-        private List<ByteInstruction> CompileBinaryOperation(BinOpNode op, CompileContext context) {
-            List<ByteInstruction> instructions = new List<ByteInstruction>();
-            instructions.AddRange(this.CompileNode(op.Left, context));
-            instructions.AddRange(this.CompileNode(op.Right, context));
-            if (!context.Result) { 
-                return null; 
+        private List<ByteInstruction> CompileAssignmentOperation(AssignmentNode node, CompileContext context) {
+            var instructions = new List<ByteInstruction>();
+            instructions.AddRange(this.CompileNode(node.Right, context));
+            if (node.Left is LookupNode lookup) {
+                instructions.AddRange(this.CompileIndexer(lookup.Index, context, out int dim));
+                instructions.AddRange(this.CompileNode(lookup.Left as ASTNode, context));
+                instructions.Add(new ByteInstruction(Bytecode.STOREELM, dim));
+            } else { // Add other conditions here
+                instructions.Add(new ByteInstruction(Bytecode.STORELOC));
             }
-            Bytecode bytecode = op.Content switch
+            return instructions;
+        }
+
+        private List<ByteInstruction> CompileBinaryOperation(BinOpNode op, CompileContext context) {
+            List<ByteInstruction> instructions = new List<ByteInstruction>(); 
+            Bytecode bytecode = op.Op switch
             {
                 "+" => Bytecode.ADD,
                 "-" => Bytecode.SUB,
@@ -200,6 +210,14 @@ namespace HSharp.Compiling {
                 "=" => Bytecode.STORELOC,
                 _ => Bytecode.NOP,
             };
+            if (op.Left is LookupNode && bytecode == Bytecode.STORELOC) {
+                bytecode = Bytecode.STOREELM;
+            }
+            instructions.AddRange(this.CompileNode(op.Left, context));
+            instructions.AddRange(this.CompileNode(op.Right, context));
+            if (!context.Result) { 
+                return null; 
+            }            
             if (bytecode is Bytecode.NOP) {
                 context.UpdateResultIfErr(new CompileResult(false, $"Unknown binary operation '{op.Content}'").SetOrigin(op.Pos));
                 return null;
@@ -297,6 +315,19 @@ namespace HSharp.Compiling {
             return instructions;
         }
 
+        private List<ByteInstruction> CompileNewArray(NewArrayNode node, CompileContext context) {
+            List<ByteInstruction> instructions = new List<ByteInstruction>();
+            foreach (ASTNode dimNode in node.Indexer.Nodes) {
+                instructions.AddRange(this.CompileNode(dimNode, context));
+            }
+            if (node.GetHint(CompileHintType.TypeHint).Value.Args[0] is ArrayType aType) {
+                instructions.Add(new ByteInstruction(Bytecode.NEWARRAY, node.Indexer.Nodes.Count, aType.ReferencedType.ToString()));
+                return instructions;
+            } else {
+                throw new Exception();
+            }
+        }
+
         private List<ByteInstruction> CompileValueListInitializer(ValueListInitializerNode valListNode, CompileContext context) {
 
             var instructions = new List<ByteInstruction>();
@@ -315,7 +346,8 @@ namespace HSharp.Compiling {
                     int count = length * vType.Size;
                     int start = context.AddConstBytes(content);
 
-                    instructions.Add(new ByteInstruction(Bytecode.NEWARRAY, length, vType.ToString()));
+                    instructions.Add(new ByteInstruction(Bytecode.LCSI32, length));
+                    instructions.Add(new ByteInstruction(Bytecode.NEWARRAY, 1, vType.ToString()));
                     instructions.Add(new ByteInstruction(Bytecode.CCPY, start, count));
 
                 } else {
@@ -336,16 +368,20 @@ namespace HSharp.Compiling {
 
         private List<ByteInstruction> CompileLookupNode(LookupNode lookupNode, CompileContext context) {
 
-            var instructions = this.CompileNode(lookupNode.Left as ASTNode, context);
-
-            foreach (ASTNode node in lookupNode.Index.Nodes) {
-                instructions.AddRange(this.CompileNode(node, context));
-            }
-
-            instructions.Add(new ByteInstruction(Bytecode.LOADELM, lookupNode.Index.Nodes.Count));
-
+            var instructions = this.CompileIndexer(lookupNode.Index, context, out int dim);
+            instructions.AddRange(this.CompileNode(lookupNode.Left as ASTNode, context));
+            instructions.Add(new ByteInstruction(Bytecode.LOADELM, dim));
             return instructions;
 
+        }
+
+        private List<ByteInstruction> CompileIndexer(IndexerNode indexer, CompileContext context, out int dimensions) {
+            var res = new List<ByteInstruction>();
+            dimensions = indexer.Nodes.Count;
+            foreach (ASTNode node in indexer.Nodes) {
+                res.AddRange(this.CompileNode(node, context));
+            }
+            return res;
         }
 
     }

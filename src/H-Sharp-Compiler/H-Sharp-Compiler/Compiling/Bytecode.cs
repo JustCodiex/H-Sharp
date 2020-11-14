@@ -12,6 +12,14 @@
         INC,
         DEC,
 
+        EQ,
+        NEQ,
+        LE,
+        LQ, // Less or eQual
+        GE,
+        GQ, // Greater or eQual
+        NEG, // Negate
+
         ENTER, // Enter scope
         EXIT, // Exit scope
 
@@ -28,6 +36,7 @@
         RET,
 
         CALL, // std function call
+        VCALL,
 
         INVOKE, // member call
         VINVOKE, // member virtual call

@@ -1,6 +1,6 @@
 ﻿using HSharp.IO;
 using HSharp.Language;
-using HSharp.Parsing.AbstractSnyaxTree.Expression;
+using HSharp.Parsing.AbstractSnyaxTree.Statement;
 
 namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
     
@@ -19,7 +19,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
 
         public ushort EnterIndex { get; set; }
 
-        public VarDeclNode(SourcePosition pos, ITypeIdentifier varTypeNode, BinOpNode assignNode) : base(pos, "=", LexTokenType.None) {
+        public VarDeclNode(SourcePosition pos, ITypeIdentifier varTypeNode, AssignmentNode assignNode) : base(pos, "=", LexTokenType.None) {
             this.TypeExpr = varTypeNode;
             this.VarName = assignNode.Left.Content;
             this.AssignToExpr = assignNode.Right;

@@ -66,7 +66,7 @@ namespace HSharp.Analysis.Verifying {
                         this.VarsNode(subNode, scope);
                     }
                     break;
-                case VarDeclNode vDeclNode: // TODO: Make it an error such that two variables of the same name may not be declared in the same scope
+                case VarDeclNode vDeclNode:
                     this.VarsNode(vDeclNode.AssignToExpr, scope);
                     vDeclNode.EnterIndex = scope.Enter(vDeclNode.VarName);
                     break;
@@ -95,6 +95,11 @@ namespace HSharp.Analysis.Verifying {
                     break;
                 case NewObjectNode newObjNode:
                     foreach (ASTNode arg in newObjNode.CtorArguments.Arguments) {
+                        this.VarsNode(arg, scope);
+                    }
+                    break;
+                case NewArrayNode newArrNode:
+                    foreach (ASTNode arg in newArrNode.Indexer.Nodes) {
                         this.VarsNode(arg, scope);
                     }
                     break;
