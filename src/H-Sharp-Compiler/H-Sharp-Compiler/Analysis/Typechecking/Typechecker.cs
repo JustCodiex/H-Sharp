@@ -41,6 +41,7 @@ namespace HSharp.Analysis.Typechecking {
             FuncDeclNode funcDecl => this.TypecheckFuncDeclOperation(funcDecl, tenv, domain),
             ClassDeclNode classDecl => this.TypecheckClassDeclOperation(classDecl, tenv, domain),
             BinOpNode binop => this.TypecheckBinaryOperation(binop, tenv, domain),
+            UnaryOpNode unop => this.TypecheckUnaryOperation(unop, tenv, domain),
             MemberAccessNode memberAccess => this.TypecheckMemberAccessOperation(memberAccess, tenv, domain),
             IdentifierNode id => this.TypecheckIdentifierOperation(id, tenv, domain),
             ThisNode thisNode => this.TypecheckIdentifierOperation(thisNode, tenv, domain),
@@ -190,12 +191,45 @@ namespace HSharp.Analysis.Typechecking {
                         } else {
                             return (new CompileResult(false).SetOrigin(binop), null);
                         }
+                    case "|":
+                        if (expr1.Item2 == expr2.Item2) {
+                            return (new CompileResult(true), expr1.Item2);
+                        } else {
+                            return (new CompileResult(false).SetOrigin(binop), null);
+                        }
+                    case "&":
+                        if (expr1.Item2 == expr2.Item2) {
+                            return (new CompileResult(true), expr1.Item2);
+                        } else {
+                            return (new CompileResult(false).SetOrigin(binop), null);
+                        }
                     default:
                         return (new CompileResult(false, $"Unknown operator '{binop.Op}'.").SetOrigin(binop.Pos), null);
                 }
+            } else {
+                throw new NotImplementedException();
             }
 
-            return (new CompileResult(true), null);
+        }
+        private (CompileResult, IValType) TypecheckUnaryOperation(UnaryOpNode unop, TypeEnvironment tenv, Domain domain) {
+            
+            (CompileResult, IValType) expr = this.TypecheckNode(unop.Expr, tenv, domain);
+            if (!expr.Item1) { return expr; }
+
+            if (expr.Item2 is ValueType vt) {
+                switch (unop.Op) {
+                    case "!":
+                        if (vt.Name.CompareTo("bool") == 0) {
+                            return (new CompileResult(true), expr.Item2);
+                        } else {
+                            return (new CompileResult(false, $"Invalid operator '!' on operand of type \"{vt}\".").SetOrigin(unop), null);
+                        }
+                    default:
+                        return (new CompileResult(false, $"Unknown operator '{unop.Op}'.").SetOrigin(unop), null);
+                }
+            } else {
+                throw new NotImplementedException();
+            }
 
         }
 
@@ -216,6 +250,7 @@ namespace HSharp.Analysis.Typechecking {
         private (CompileResult, IValType) TypecheckConstOperation(ILiteral lit, Domain domain) => lit switch
         {
             IntLitNode => (new CompileResult(true), domain.First<ValueType>("int")),
+            BoolLitNode => (new CompileResult(true), domain.First<ValueType>("bool")),
             _ => (new CompileResult(false).SetOrigin((lit as ASTNode).Pos), null),
         };
 

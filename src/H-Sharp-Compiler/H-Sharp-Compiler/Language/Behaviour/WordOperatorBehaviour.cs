@@ -43,6 +43,8 @@ namespace HSharp.Language.Behaviour {
         public bool IsLegalWhen(bool pre, bool post) => post is true;
 
         public bool IsOperatorSymbol(string symbol) => symbol.CompareTo(this.m_matchWord) == 0;
+        
+        public int GetAdvancement() => 0;
 
     }
 

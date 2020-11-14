@@ -49,7 +49,7 @@ namespace HSharp.Parsing {
         static string[] operators = new string[] {
             @"\+", "-", @"\*", "/", "%", "=", @"\|", "&", ";", ",", @"\.",
             @"\(", @"\)", @"\[", @"\]", @"\{", @"\}", @"\""", @"'", ":",
-            "<", ">", "#", @"\?"
+            "<", ">", "#", @"\?", "!"
         };
 
         private static string __regpat = null;

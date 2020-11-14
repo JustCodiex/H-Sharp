@@ -20,6 +20,10 @@
         GQ, // Greater or eQual
         NEG, // Negate
 
+        AND,
+        OR,
+        XOR,
+
         ENTER, // Enter scope
         EXIT, // Exit scope
 
@@ -49,10 +53,12 @@
                 // then push back unto stack
 
         // LC = Load Const
+        LCSI8,
         LCSI16,
         LCSI32,
         LCSI64,
 
+        LCUI8,
         LCUI16,
         LCUI32,
         LCUI64,

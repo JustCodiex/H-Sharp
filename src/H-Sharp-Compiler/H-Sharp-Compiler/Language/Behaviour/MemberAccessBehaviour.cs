@@ -29,6 +29,8 @@ namespace HSharp.Language.Behaviour {
         public bool IsLegalWhen(bool pre, bool post) => pre == true && post == true;
 
         public bool IsLegalPreAndPostCondition(List<ASTNode> nodes, int opIndex) => nodes.Count >= 3;
+        
+        public int GetAdvancement() => 0;
 
     }
 

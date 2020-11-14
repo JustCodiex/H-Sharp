@@ -42,7 +42,7 @@ namespace HSharp.Compiling {
                     offset += instruction.GetSize();
                 }
 
-                long remainder = offset % 8;
+                long remainder = offset % 4;
                 if (remainder > 0) {
                     for (int j = 0; j < remainder; j++) {
                         allInstructions.Add(new ByteInstruction(Bytecode.NOP));
@@ -167,10 +167,11 @@ namespace HSharp.Compiling {
             {
                 ThisNode => Instruction(new ByteInstruction(Bytecode.PUSH, 0)),
                 BaseNode => Instruction(new ByteInstruction(Bytecode.PUSH, 0)),
-                IntLitNode intLitNode => this.CompileConstant(intLitNode),
+                ILiteral litNode => this.CompileConstant(litNode as ASTNode),
                 IdentifierNode idNode => Instruction(new ByteInstruction(idNode.IsFuncIdentifier ? Bytecode.PUSHCLOSURE : Bytecode.PUSH, idNode.Index)),
                 AssignmentNode assignmentNode => this.CompileAssignmentOperation(assignmentNode, context),
                 BinOpNode binOpNode => this.CompileBinaryOperation(binOpNode, context),
+                UnaryOpNode unaryOpNode => this.CompileUnaryOperation(unaryOpNode, context),
                 VarDeclNode vDeclNode => this.CompileVariableDeclaration(vDeclNode, context),
                 CallNode callNode => this.CompileCallExpression(callNode, context),
                 ScopeNode scopeNode => this.CompileScope(scopeNode, context),
@@ -193,6 +194,8 @@ namespace HSharp.Compiling {
                 instructions.AddRange(this.CompileIndexer(lookup.Index, context, out int dim));
                 instructions.AddRange(this.CompileNode(lookup.Left as ASTNode, context));
                 instructions.Add(new ByteInstruction(Bytecode.STOREELM, dim));
+            } else if (node.Left is MemberAccessNode) {
+                instructions.Add(new ByteInstruction(Bytecode.STOREFLD));
             } else { // Add other conditions here
                 instructions.Add(new ByteInstruction(Bytecode.STORELOC));
             }
@@ -207,20 +210,37 @@ namespace HSharp.Compiling {
                 "-" => Bytecode.SUB,
                 "/" => Bytecode.DIV,
                 "*" => Bytecode.MUL,
-                "=" => Bytecode.STORELOC,
+                "|" => Bytecode.OR,
+                "&" => Bytecode.AND,
+                "=" => throw new Exception(),
                 _ => Bytecode.NOP,
             };
-            if (op.Left is LookupNode && bytecode == Bytecode.STORELOC) {
-                bytecode = Bytecode.STOREELM;
-            }
             instructions.AddRange(this.CompileNode(op.Left, context));
             instructions.AddRange(this.CompileNode(op.Right, context));
             if (!context.Result) { 
-                return null; 
+                return new List<ByteInstruction>(); 
             }            
             if (bytecode is Bytecode.NOP) {
                 context.UpdateResultIfErr(new CompileResult(false, $"Unknown binary operation '{op.Content}'").SetOrigin(op.Pos));
-                return null;
+                return new List<ByteInstruction>();
+            }
+            instructions.Add(new ByteInstruction(bytecode));
+            return instructions;
+        }
+
+        private List<ByteInstruction> CompileUnaryOperation(UnaryOpNode op, CompileContext context) {
+            var instructions = new List<ByteInstruction>();
+            Bytecode bytecode = op.Op switch
+            {
+                "!" => Bytecode.NEG,
+                _ => Bytecode.NOP,
+            };
+            instructions.AddRange(this.CompileNode(op.Expr, context)); if (!context.Result) {
+                return new List<ByteInstruction>();
+            }
+            if (bytecode is Bytecode.NOP) {
+                context.UpdateResultIfErr(new CompileResult(false, $"Unknown unary operation '{op.Content}'").SetOrigin(op.Pos));
+                return new List<ByteInstruction>();
             }
             instructions.Add(new ByteInstruction(bytecode));
             return instructions;
@@ -241,6 +261,9 @@ namespace HSharp.Compiling {
             switch (node) {
                 case IntLitNode ilit:
                     instructions.Add(new ByteInstruction(Bytecode.LCSI32, ilit.Integer));
+                    break;
+                case BoolLitNode blit:
+                    instructions.Add(new ByteInstruction(Bytecode.LCSI8, blit.Boolean ? (byte)0x1 : (byte)0x0));
                     break;
                 default:
                     break;

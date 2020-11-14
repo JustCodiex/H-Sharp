@@ -112,10 +112,13 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                 new IOperatorBehaviour[] { new IndexLookupOperatorBehaviour("[]") },
                 new IOperatorBehaviour[] { new MemberAccessBehaviour(".") },
                 new IOperatorBehaviour[] { new WordOperatorBehaviour("new", false) },
+                //new IOperatorBehaviour[] { new UnaryPostOperatorBehaviour("++"), new UnaryPostOperatorBehaviour("--") },
+                new IOperatorBehaviour[] { new UnaryOperatorBehaviour(false, "!") },
                 new IOperatorBehaviour[] { new BinOpBehaviour("*"), new BinOpBehaviour("/") },
                 //new IOperatorBehaviour[] { new UnaryPreOperatorBehaviour("++"), new UnaryPreOperatorBehaviour("--") },
-                //new IOperatorBehaviour[] { new UnaryPostOperatorBehaviour("++"), new UnaryPostOperatorBehaviour("--") },
                 new IOperatorBehaviour[] { new BinOpBehaviour("+"), new BinOpBehaviour("-") },
+                new IOperatorBehaviour[] { new BinOpBehaviour("^"), new BinOpBehaviour("|"), new BinOpBehaviour("&") },
+                new IOperatorBehaviour[] { new BinOpBehaviour("||"), new BinOpBehaviour("&&") },
                 new IOperatorBehaviour[] { new AssignmentBehaviour("=") },
             };
 
@@ -137,6 +140,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                         bool post = j + 1 < nodes.Count;
                         if (m.IsLegalWhen(pre, post) && m.IsLegalPreAndPostCondition(nodes, j)) {
                             if (m.ApplyBehaviour(nodes, j, this.ApplyOrderOfOperations)) {
+                                j += m.GetAdvancement();
                                 continue;
                             }
                         }
@@ -159,6 +163,11 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
             int i = from;
             while (i < nodes.Count) {
+
+                if (nodes[i] is NopNode) {
+                    nodes.RemoveAt(i); // Remove the nopnode -> Should never pass through this method
+                    continue;
+                }
 
                 if (additionalPatterns != null) {
                     bool skipStandard = false;
@@ -612,6 +621,9 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                         break;
                     case LexTokenType.IntLiteral:
                         nodes.Add(new IntLitNode(this.m_tokens[i].Content, this.m_tokens[i].Position));
+                        break;
+                    case LexTokenType.BoolLiteral:
+                        nodes.Add(new BoolLitNode(this.m_tokens[i].Content, this.m_tokens[i].Position));
                         break;
                     case LexTokenType.Separator:
                         nodes.Add(new SeperatorNode(this.m_tokens[i].Content, this.m_tokens[i].Position));

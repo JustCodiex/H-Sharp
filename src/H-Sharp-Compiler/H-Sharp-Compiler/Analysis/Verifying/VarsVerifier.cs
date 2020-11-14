@@ -74,6 +74,9 @@ namespace HSharp.Analysis.Verifying {
                     this.VarsNode(binopNode.Left, scope);
                     this.VarsNode(binopNode.Right, scope);
                     break;
+                case UnaryOpNode unaryOpNode:
+                    this.VarsNode(unaryOpNode.Expr, scope);
+                    break;
                 case IdentifierNode iDNode:
                     if (scope.Lookup(iDNode.Content, out ushort idIndex)) {
                         iDNode.Index = idIndex;
@@ -118,6 +121,7 @@ namespace HSharp.Analysis.Verifying {
                 case ThisNode:
                 case BaseNode:
                 case IntLitNode:
+                case BoolLitNode:
                     break;
                 default:
                     Log.WriteLine($"Vars not implemented for type: {node.GetType().Name}");

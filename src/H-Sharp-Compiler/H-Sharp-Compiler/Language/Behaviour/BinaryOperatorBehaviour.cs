@@ -40,6 +40,8 @@ namespace HSharp.Language.Behaviour {
 
         public bool IsLegalPreAndPostCondition(List<ASTNode> nodes, int opIndex) => nodes.Count >= 3;
 
+        public int GetAdvancement() => 0;
+
     }
 
     public class BinOpBehaviour : BinaryOperatorBehaviour<BinOpNode> {

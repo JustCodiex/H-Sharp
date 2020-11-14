@@ -7,6 +7,8 @@ namespace HSharp.Language.Behaviour {
 
     public interface IOperatorBehaviour {
 
+        int GetAdvancement();
+
         bool IsOperatorSymbol(string symbol);
 
         bool IsLegalWhen(bool pre, bool post);
