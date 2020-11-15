@@ -619,19 +619,18 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                 this.ApplySingleNodeGrammar(nodes[from + 2], true);
                 head = (IBranch)(nodes[from] = new IfStatement(nodes[from + 1] as IExpr, nodes[from + 2] as IExpr, nodes[from].Pos));
                 this.RemoveNode(nodes, from + 1, 2);
-            } else if (TypeSequence<ASTNode, ASTNode, IExpr, SeperatorNode, IExpr>.Match(nodes, from)) { 
-                if (nodes[from + 2] is SeperatorNode node && node.Content.CompareTo(",") == 0){
-                    throw new NotImplementedException();
-                } else {
-                    throw new SyntaxError(-1, nodes[from].Pos, string.Empty);
-                }
             } else {
                 throw new SyntaxError(-1, nodes[from].Pos, string.Empty);
             }
             while (from + 2 < nodes.Count && nodes[from + 1] is ASTNode els && els.LexicalType == LexTokenType.Keyword) {
                 if (els.Content.CompareTo("else") == 0) {
-                    if (from + 3 < nodes.Count && nodes[from + 2] is ASTNode elif && elif.Content.CompareTo("if") == 0) {
-                        throw new NotImplementedException();
+                    if (from + 4 < nodes.Count && nodes[from + 2] is ASTNode elif && elif.Content.CompareTo("if") == 0) {
+                        this.ApplySingleNodeGrammar(nodes[from + 3], true);
+                        this.ApplySingleNodeGrammar(nodes[from + 4], true);
+                        nodes[from + 1] = new ElseIfStatement(head, nodes[from+3] as IExpr, nodes[from+4] as IExpr, nodes[from+1].Pos);
+                        head.SetTrail(nodes[from+1] as IBranch);
+                        head = nodes[from + 1] as IBranch;
+                        this.RemoveNode(nodes, from + 1, 4);
                     } else if (nodes[from+2] is IExpr ebody) {
                         this.ApplySingleNodeGrammar(ebody as ASTNode, true);
                         head.SetTrail(new ElseStatement(head, ebody, nodes[from+1].Pos));
