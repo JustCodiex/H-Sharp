@@ -10,6 +10,7 @@ using HSharp.Parsing.AbstractSnyaxTree.Literal;
 using HSharp.Parsing.AbstractSnyaxTree.Statement;
 using HSharp.Parsing.AbstractSnyaxTree.Initializer;
 using HSharp.Compiling.Hint;
+using HSharp.Compiling.Branching;
 using HSharp.Analysis.TypeData;
 using ValueType = HSharp.Analysis.TypeData.ValueType;
 
@@ -162,7 +163,7 @@ namespace HSharp.Compiling {
 
         }
 
-        private List<ByteInstruction> CompileNode(ASTNode node, CompileContext context) {
+        public List<ByteInstruction> CompileNode(ASTNode node, CompileContext context) {
             List<ByteInstruction> instructions = node switch
             {
                 ThisNode => Instruction(new ByteInstruction(Bytecode.PUSH, 0)),
@@ -182,6 +183,7 @@ namespace HSharp.Compiling {
                 NewArrayNode newArrNode => this.CompileNewArray(newArrNode, context),
                 ValueListInitializerNode valListNode => this.CompileValueListInitializer(valListNode, context),
                 LookupNode lookupNode => this.CompileLookupNode(lookupNode, context),
+                IfStatement ifStatement => this.CompileBranch(ifStatement, context),
                 _ => throw new NotImplementedException(),
             };
             return instructions;
@@ -405,6 +407,22 @@ namespace HSharp.Compiling {
                 res.AddRange(this.CompileNode(node, context));
             }
             return res;
+        }
+
+        private List<ByteInstruction> CompileBranch(IfStatement statement, CompileContext context) {
+
+            // Create head branch and then compile it
+            Branch entryBranch = new Branch(statement);
+            entryBranch.ToTree();
+            entryBranch.Optimize();
+            entryBranch.CompileBranch(this, context);
+
+            // Get the instructions
+            var instructions = entryBranch.ToInstructions();
+
+            // Return instructions
+            return instructions;
+
         }
 
     }

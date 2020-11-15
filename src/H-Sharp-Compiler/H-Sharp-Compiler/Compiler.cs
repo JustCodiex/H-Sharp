@@ -72,6 +72,17 @@ namespace HSharp {
                 }
             }
 
+            ControlpathVerifier pathVerifier = new ControlpathVerifier();
+            for (int i = 0; i < asts.Length; i++) {
+                result = pathVerifier.Verify(asts[i]);
+                if (!result) {
+                    Log.WriteLine($"Compile Error \"{project.Name}\" : {result}");
+                    Log.WriteLine();
+                    _thisLog.SaveAndClose(project.Output.Replace(".bin", ".log"));
+                    return result;
+                }
+            }
+
             Typechecker typechecker = new Typechecker();
             for (int i = 0; i < asts.Length; i++) {
                 result = typechecker.Typecheck(asts[i], globalDomain);

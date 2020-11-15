@@ -12,6 +12,7 @@ namespace HSharp.Parsing {
 
         static string[] definiteKeywords = new string[] { // words guaranteed to be keywords
             "if",
+            "else",
             "for",
             "do",
             "while",

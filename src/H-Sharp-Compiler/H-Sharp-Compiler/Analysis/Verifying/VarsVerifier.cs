@@ -118,6 +118,16 @@ namespace HSharp.Analysis.Verifying {
                     this.VarsNode(lookupNode.Index, scope);
                     this.VarsNode(lookupNode.Left as ASTNode, scope);
                     break;
+                case IfStatement ifStatement:
+                    this.VarsNode(ifStatement.Condition as ASTNode, scope);
+                    this.VarsNode(ifStatement.Body as ASTNode, scope);
+                    if (ifStatement.HasTrailingBranch) {
+                        this.VarsNode(ifStatement.Trail as ASTNode, scope);
+                    }
+                    break;
+                case ElseStatement elseStatement:
+                    this.VarsNode(elseStatement.Body as ASTNode, scope);
+                    break;
                 case ThisNode:
                 case BaseNode:
                 case IntLitNode:

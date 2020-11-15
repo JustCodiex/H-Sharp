@@ -52,6 +52,10 @@
                 // pop array and copy into
                 // then push back unto stack
 
+        JMP,
+        JMPIFT,
+        JMPIFF,
+
         // LC = Load Const
         LCSI8,
         LCSI16,

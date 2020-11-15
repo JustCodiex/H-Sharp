@@ -55,6 +55,8 @@ namespace HSharp.Analysis.Typechecking {
             ValueListInitializerNode vListNode => this.TypecheckValListInitOperation(vListNode, tenv, domain),
             LookupNode lookupNode => this.TypecheckLookupOperation(lookupNode, tenv, domain),
             IndexerNode indexerNode => this.TypecheckIndexerOperation(indexerNode, tenv, domain),
+            IfStatement ifStatement => this.TypecheckIfStatement(ifStatement, tenv, domain),
+            ElseStatement elseStatement => this.TypecheckElseStatement(elseStatement, tenv, domain),
             ILiteral lit => this.TypecheckConstOperation(lit, domain),
             _ => (new CompileResult(false, $"Unsupported type-checkable element '{node.NodeType}'").SetOrigin(node), null),
         };
@@ -454,6 +456,40 @@ namespace HSharp.Analysis.Typechecking {
 
         private (CompileResult, IValType) TypecheckIndexerOperation(IndexerNode indexerNode, TypeEnvironment tenv, Domain domain)
             => this.TypecheckNode(indexerNode.Nodes[0], tenv, domain); // TODO: Make this more generic...
+
+        private (CompileResult, IValType) TypecheckIfStatement(IfStatement statement, TypeEnvironment tenv, Domain domain) {
+
+            var condition = this.TypecheckNode(statement.Condition as ASTNode, tenv, domain);
+            if (!condition.Item1) {
+                return condition;
+            }
+
+            if (condition.Item2 == domain.First<ValueType>("bool") || this.IsSubtype(condition.Item2, domain.First<ValueType>("int"), out _)) {
+                var bodyResult = this.TypecheckNode(statement.Body as ASTNode, tenv, domain);
+                if (!bodyResult.Item1) {
+                    return bodyResult;
+                }
+                if (statement.HasTrailingBranch) {
+                    var trail = this.TypecheckNode(statement.Trail as ASTNode, tenv, domain);
+                    if (!trail.Item1) {
+                        return trail;
+                    }
+                }
+            } else {
+                return (new CompileResult(false, $"Invalid resulting type in condition.").SetOrigin(statement), null);
+            }
+
+            return (new CompileResult(true), VoidType.Void);
+
+        }
+
+        private (CompileResult, IValType) TypecheckElseStatement(ElseStatement statement, TypeEnvironment tenv, Domain domain) {
+            var body = this.TypecheckNode(statement.Body as ASTNode, tenv, domain);
+            if (!body.Item1) {
+                return body;
+            }
+            return (new CompileResult(true), VoidType.Void);
+        }
 
         private bool IsSubtype(IValType subType, IValType baseType, out string err) {
             if (subType is null || baseType is null) {

@@ -191,6 +191,9 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                         case "return":
                             this.ApplyReturnStatementGrammar(nodes, i);
                             break;
+                        case "if":
+                            this.ApplyIfStatementGrammar(nodes, i);
+                            break;
                         case "public":
                         case "private":
                         case "protected":
@@ -607,6 +610,40 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                 throw new Exception();
             }
 
+        }
+
+        private void ApplyIfStatementGrammar(List<ASTNode> nodes, int from) {
+            IBranch head;
+            if (TypeSequence<ASTNode, ASTNode, IExpr, IExpr>.Match(nodes, from)) {
+                this.ApplySingleNodeGrammar(nodes[from + 1], true);
+                this.ApplySingleNodeGrammar(nodes[from + 2], true);
+                head = (IBranch)(nodes[from] = new IfStatement(nodes[from + 1] as IExpr, nodes[from + 2] as IExpr, nodes[from].Pos));
+                this.RemoveNode(nodes, from + 1, 2);
+            } else if (TypeSequence<ASTNode, ASTNode, IExpr, SeperatorNode, IExpr>.Match(nodes, from)) { 
+                if (nodes[from + 2] is SeperatorNode node && node.Content.CompareTo(",") == 0){
+                    throw new NotImplementedException();
+                } else {
+                    throw new SyntaxError(-1, nodes[from].Pos, string.Empty);
+                }
+            } else {
+                throw new SyntaxError(-1, nodes[from].Pos, string.Empty);
+            }
+            while (from + 2 < nodes.Count && nodes[from + 1] is ASTNode els && els.LexicalType == LexTokenType.Keyword) {
+                if (els.Content.CompareTo("else") == 0) {
+                    if (from + 3 < nodes.Count && nodes[from + 2] is ASTNode elif && elif.Content.CompareTo("if") == 0) {
+                        throw new NotImplementedException();
+                    } else if (nodes[from+2] is IExpr ebody) {
+                        this.ApplySingleNodeGrammar(ebody as ASTNode, true);
+                        head.SetTrail(new ElseStatement(head, ebody, nodes[from+1].Pos));
+                        this.RemoveNode(nodes, from + 1, 2);
+                        break;
+                    } else {
+                        throw new SyntaxError(-1, nodes[from].Pos, string.Empty);
+                    }
+                } else {
+                    break;
+                }
+            }
         }
 
         private List<ASTNode> ParseTopLevel() {
