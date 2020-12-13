@@ -20,7 +20,8 @@ namespace HSharp.Language.Behaviour {
             this.m_advanceBy = 0;
             if (this.m_isPostOp) {
                 nodes[opIndex - 1] = new UnaryOpNode(nodes[opIndex].Pos, nodes[opIndex - 1], this.m_symbol, true);
-                nodes[opIndex] = new NopNode();
+                nodes.RemoveAt(opIndex);
+                this.m_advanceBy = 0;
             } else {
                 nodes[opIndex] = new UnaryOpNode(nodes[opIndex].Pos, nodes[opIndex + 1], this.m_symbol, false);
                 nodes.RemoveAt(opIndex + 1);
@@ -37,7 +38,10 @@ namespace HSharp.Language.Behaviour {
             }
         }
 
-        public bool IsLegalWhen(bool pre, bool post) => (this.m_isPostOp && post) || (!this.m_isPostOp && pre);
+        public bool IsLegalWhen(bool pre, bool post) 
+            => (this.m_isPostOp && pre) || (!this.m_isPostOp && post);
+        // Is post operator and has something preceding it
+        // Is pre operator and has something following it
 
         public bool IsOperatorSymbol(string symbol) => this.m_symbol.CompareTo(symbol) == 0;
 

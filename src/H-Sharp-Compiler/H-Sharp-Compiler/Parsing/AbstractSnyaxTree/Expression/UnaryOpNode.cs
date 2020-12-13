@@ -9,7 +9,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Expression {
 
         public bool IsPostOp { get; }
 
-        public UnaryOpNode(SourcePosition position, ASTNode expr, string op, bool isPostOp) : base(position, op, LexTokenType.Operator) {
+        public UnaryOpNode(SourcePosition position, ASTNode expr, string op, bool isPostOp) : base(position, op, LexTokenType.None) {
             this.Expr = expr;
             this.IsPostOp = isPostOp;
             this.Op = op;
