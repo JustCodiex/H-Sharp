@@ -48,7 +48,7 @@ namespace HSharp.Parsing {
         };
 
         static string[] operators = new string[] {
-            @"\+", "-", @"\*", "/", "%", "=", @"\|", "&", ";", ",", @"\.",
+            @"\+\+", "--", @"\+", "-", @"\*", "/", "%", "=", @"\|", "&", ";", ",", @"\.",
             @"\(", @"\)", @"\[", @"\]", @"\{", @"\}", @"\""", @"'", ":",
             "<", ">", "#", @"\?", "!"
         };
@@ -69,10 +69,17 @@ namespace HSharp.Parsing {
             }
         }
 
-        public LexToken[] Lex(string sourceFilePath) {
+        public LexToken[] LexFile(string sourceFilePath) {
 
-            // Load all text
+            // Lext the file
             string text = File.ReadAllText(sourceFilePath);
+
+            // Return the lexed result of the file content
+            return this.Lex(text);
+
+        }
+
+        public LexToken[] Lex(string text, string sourceFile = "unknown.hsharp") {
 
             // Parse line data
             Range[] lnRanges = this.GetLineRanges(text);
@@ -105,39 +112,39 @@ namespace HSharp.Parsing {
                     case "id":
                         if (definiteKeywords.Contains(match.Value)) {
                             if (match.Value.CompareTo("false") == 0 || match.Value.CompareTo("true") == 0) {
-                                tokens.Add(new LexToken(LexTokenType.BoolLiteral, match.Value, new SourcePosition(ln, cl)));
+                                tokens.Add(new LexToken(LexTokenType.BoolLiteral, match.Value, new SourcePosition(ln, cl, sourceFile)));
                             } else if (match.Value.CompareTo("null") == 0) {
-                                tokens.Add(new LexToken(LexTokenType.NullLiteral, match.Value, new SourcePosition(ln, cl)));
+                                tokens.Add(new LexToken(LexTokenType.NullLiteral, match.Value, new SourcePosition(ln, cl, sourceFile)));
                             } else {
-                                tokens.Add(new LexToken(LexTokenType.Keyword, match.Value, new SourcePosition(ln, cl)));
+                                tokens.Add(new LexToken(LexTokenType.Keyword, match.Value, new SourcePosition(ln, cl, sourceFile)));
                             }
                         } else {
-                            tokens.Add(new LexToken(LexTokenType.Identifier, match.Value, new SourcePosition(ln, cl)));
+                            tokens.Add(new LexToken(LexTokenType.Identifier, match.Value, new SourcePosition(ln, cl, sourceFile)));
                         }
                         break;
                     case "ilit":
-                        tokens.Add(new LexToken(LexTokenType.IntLiteral, match.Value, new SourcePosition(ln, cl)));
+                        tokens.Add(new LexToken(LexTokenType.IntLiteral, match.Value, new SourcePosition(ln, cl, sourceFile)));
                         break;
                     case "flit":
 
                         break;
                     case "op":
                         if (match.Value.CompareTo(";") == 0 || match.Value.CompareTo(",") == 0) {
-                            tokens.Add(new LexToken(LexTokenType.Separator, match.Value, new SourcePosition(ln, cl)));
+                            tokens.Add(new LexToken(LexTokenType.Separator, match.Value, new SourcePosition(ln, cl, sourceFile)));
                         } else if (match.Value.CompareTo("(") == 0) {
-                            tokens.Add(new LexToken(LexTokenType.ExpressionStart, match.Value, new SourcePosition(ln, cl)));
+                            tokens.Add(new LexToken(LexTokenType.ExpressionStart, match.Value, new SourcePosition(ln, cl, sourceFile)));
                         } else if (match.Value.CompareTo(")") == 0) {
-                            tokens.Add(new LexToken(LexTokenType.ExpressionEnd, match.Value, new SourcePosition(ln, cl)));
+                            tokens.Add(new LexToken(LexTokenType.ExpressionEnd, match.Value, new SourcePosition(ln, cl, sourceFile)));
                         } else if (match.Value.CompareTo("[") == 0) {
-                            tokens.Add(new LexToken(LexTokenType.IndexerStart, match.Value, new SourcePosition(ln, cl)));
+                            tokens.Add(new LexToken(LexTokenType.IndexerStart, match.Value, new SourcePosition(ln, cl, sourceFile)));
                         } else if (match.Value.CompareTo("]") == 0) {
-                            tokens.Add(new LexToken(LexTokenType.IndexerEnd, match.Value, new SourcePosition(ln, cl)));
+                            tokens.Add(new LexToken(LexTokenType.IndexerEnd, match.Value, new SourcePosition(ln, cl, sourceFile)));
                         } else if (match.Value.CompareTo("{") == 0) {
-                            tokens.Add(new LexToken(LexTokenType.BlockStart, match.Value, new SourcePosition(ln, cl)));
+                            tokens.Add(new LexToken(LexTokenType.BlockStart, match.Value, new SourcePosition(ln, cl, sourceFile)));
                         } else if (match.Value.CompareTo("}") == 0) {
-                            tokens.Add(new LexToken(LexTokenType.BlockEnd, match.Value, new SourcePosition(ln, cl)));
+                            tokens.Add(new LexToken(LexTokenType.BlockEnd, match.Value, new SourcePosition(ln, cl, sourceFile)));
                         } else {
-                            tokens.Add(new LexToken(LexTokenType.Operator, match.Value, new SourcePosition(ln, cl)));
+                            tokens.Add(new LexToken(LexTokenType.Operator, match.Value, new SourcePosition(ln, cl, sourceFile)));
                         }
                         break;
                     default: // included single line comments

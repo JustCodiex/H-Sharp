@@ -8,9 +8,9 @@ namespace HSharp.IO {
 
         public string[] CodeFiles => this.m_files;
 
-        public string Name { get; }
+        public string Name { get; set; }
 
-        public string Output { get; }
+        public string Output { get; set; }
 
         public SourceProject(params string[] files) {
             this.m_files = files;

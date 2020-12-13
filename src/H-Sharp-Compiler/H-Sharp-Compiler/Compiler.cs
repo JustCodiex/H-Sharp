@@ -125,7 +125,7 @@ namespace HSharp {
         private CompileResult ParseFile(string sourceFilePath, out AST ast) {
 
             Lexer lexer = new Lexer();
-            LexToken[] tokens = lexer.Lex(sourceFilePath);
+            LexToken[] tokens = lexer.LexFile(sourceFilePath);
 
             Log.WriteLine($"Parsing {sourceFilePath}");
 

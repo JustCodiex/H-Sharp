@@ -112,11 +112,15 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                 new IOperatorBehaviour[] { new IndexLookupOperatorBehaviour("[]") },
                 new IOperatorBehaviour[] { new MemberAccessBehaviour(".") },
                 new IOperatorBehaviour[] { new WordOperatorBehaviour("new", false) },
-                //new IOperatorBehaviour[] { new UnaryPostOperatorBehaviour("++"), new UnaryPostOperatorBehaviour("--") },
-                new IOperatorBehaviour[] { new UnaryOperatorBehaviour(false, "!") },
+                new IOperatorBehaviour[] { new UnaryPostOperatorBehaviour("++"), new UnaryPostOperatorBehaviour("--") }, // Not registering properly!
+                new IOperatorBehaviour[] { new UnaryPreOperatorBehaviour("!") },
                 new IOperatorBehaviour[] { new BinOpBehaviour("*"), new BinOpBehaviour("/") },
-                //new IOperatorBehaviour[] { new UnaryPreOperatorBehaviour("++"), new UnaryPreOperatorBehaviour("--") },
+                new IOperatorBehaviour[] { new UnaryPreOperatorBehaviour("++"), new UnaryPreOperatorBehaviour("--") },
                 new IOperatorBehaviour[] { new BinOpBehaviour("+"), new BinOpBehaviour("-") },
+                new IOperatorBehaviour[] { 
+                    new BinOpBehaviour("<"), new BinOpBehaviour("<="), new BinOpBehaviour(">"), new BinOpBehaviour(">="),
+                    new BinOpBehaviour("=="), new BinOpBehaviour("!=")
+                },
                 new IOperatorBehaviour[] { new BinOpBehaviour("^"), new BinOpBehaviour("|"), new BinOpBehaviour("&") },
                 new IOperatorBehaviour[] { new BinOpBehaviour("||"), new BinOpBehaviour("&&") },
                 new IOperatorBehaviour[] { new AssignmentBehaviour("=") },
@@ -134,7 +138,8 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
                 int j = 0;
                 while (j < nodes.Count) {
-                    if (operatorTokenTypes.Any(x => x == nodes[j].LexicalType) && ops.Any(x => x.IsOperatorSymbol(nodes[j].Content))) {
+                    bool anySymbolMatch = ops.Any(x => x.IsOperatorSymbol(nodes[j].Content));
+                    if (operatorTokenTypes.Any(x => x == nodes[j].LexicalType) && anySymbolMatch) {
                         var m = ops.First(x => x.IsOperatorSymbol(nodes[j].Content));
                         bool pre = j - 1 >= 0;
                         bool post = j + 1 < nodes.Count;
@@ -193,6 +198,15 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                             break;
                         case "if":
                             this.ApplyIfStatementGrammar(nodes, i);
+                            break;
+                        case "while":
+                            this.ApplyWhileStatementGrammar(nodes, i);
+                            break;
+                        case "for":
+                            this.ApplyForStatementGrammar(nodes, i);
+                            break;
+                        case "do":
+                            this.ApplyDoStatementGrammar(nodes, i);
                             break;
                         case "public":
                         case "private":
@@ -643,6 +657,24 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                     break;
                 }
             }
+        }
+
+        private void ApplyWhileStatementGrammar(List<ASTNode> nodes, int from) {
+            if (TypeSequence<ASTNode, ASTNode, IExpr, IExpr>.Match(nodes, from)) {
+                nodes[from] = new WhileStatement(nodes[from + 1] as IExpr, nodes[from + 2] as IExpr, nodes[from].Pos);
+                nodes.RemoveRange(from + 1, 2);
+                return;
+            } else {
+                throw new SyntaxError(-1, nodes[from].Pos, string.Empty);
+            }
+        }
+
+        private void ApplyDoStatementGrammar(List<ASTNode> nodes, int from) {
+            throw new NotImplementedException();
+        }
+
+        private void ApplyForStatementGrammar(List<ASTNode> nodes, int from) {
+            throw new NotImplementedException();
         }
 
         private List<ASTNode> ParseTopLevel() {

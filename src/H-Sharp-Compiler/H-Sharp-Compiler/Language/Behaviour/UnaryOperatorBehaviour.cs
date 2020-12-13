@@ -45,4 +45,12 @@ namespace HSharp.Language.Behaviour {
 
     }
 
+    public class UnaryPreOperatorBehaviour : UnaryOperatorBehaviour {
+        public UnaryPreOperatorBehaviour(string symbol) : base(false, symbol) {}
+    }
+
+    public class UnaryPostOperatorBehaviour : UnaryOperatorBehaviour {
+        public UnaryPostOperatorBehaviour(string symbol) : base(true, symbol) {}
+    }
+
 }
