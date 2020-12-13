@@ -82,7 +82,7 @@ namespace HSharp.Compiling {
             List<CompiledFunction> compiledInstructions = new List<CompiledFunction>();
 
             CompileUnitNode unit = ast.Root;
-            CompiledFunction topLevelFunc = new CompiledFunction($"_<{Path.GetFileNameWithoutExtension(ast.Source)}>");
+            CompiledFunction topLevelFunc = new CompiledFunction($"_<{Path.GetFileNameWithoutExtension(ast.Source.Value.Name)}>");
 
             CompileContext context = new CompileContext();
             foreach (ASTNode node in unit) {

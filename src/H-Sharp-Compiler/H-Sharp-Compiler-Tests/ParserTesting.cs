@@ -9,6 +9,8 @@ using NUnit.Framework;
 
 namespace H_Sharp_Compiler_Tests {
 
+    using static TestUtility;
+
     [TestOf(typeof(ASTBuilder))]
     public class ParserTesting {
 
@@ -17,8 +19,6 @@ namespace H_Sharp_Compiler_Tests {
 
         [SetUp]
         public void Setup() => this.lexer = new Lexer();
-
-        private static string ToSingleText(IEnumerable<string> content) => string.Join(Environment.NewLine, content);
 
         private AST BuildAST(string rawCode) {
             this.builder = new ASTBuilder(this.lexer.Lex(rawCode));

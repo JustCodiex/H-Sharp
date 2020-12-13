@@ -18,11 +18,11 @@ namespace HSharp {
             var _thisLog = new Log();
             var _thistimer = Stopwatch.StartNew();
 
-            AST[] asts = new AST[project.CodeFiles.Length];
-            for (int i = 0; i < project.CodeFiles.Length; i++) {
-                var parseResult = this.ParseFile(project.CodeFiles[i], out AST ast);
+            AST[] asts = new AST[project.Sources.Length];
+            for (int i = 0; i < project.Sources.Length; i++) {
+                var parseResult = this.ParseFile(project.Sources[i], out AST ast);
                 if (!parseResult) {
-                    Log.WriteLine($"Failed to parse {project.CodeFiles[i]} :\n\t{"Some currently un-generated error!"}");
+                    Log.WriteLine($"Failed to parse {project.Sources[i].Name} :\n\t{"Some currently un-generated error!"}");
                     Log.WriteLine();
                     return parseResult;
                 }
@@ -122,18 +122,18 @@ namespace HSharp {
 
         }
 
-        private CompileResult ParseFile(string sourceFilePath, out AST ast) {
+        private CompileResult ParseFile(SourceProjectFile sourceFile, out AST ast) {
 
             Lexer lexer = new Lexer();
-            LexToken[] tokens = lexer.LexFile(sourceFilePath);
+            LexToken[] tokens = sourceFile.IsVirtual ? lexer.Lex(sourceFile.Value) : lexer.LexFile(sourceFile.Value);
 
-            Log.WriteLine($"Parsing {sourceFilePath}");
+            Log.WriteLine($"Parsing {sourceFile.Name}");
 
             ASTBuilder builder = new ASTBuilder(tokens);
             ParsingResult result = builder.Parse();
             if (result.Success) {
                 ast = builder.Build();
-                ast.SetSource(sourceFilePath);
+                ast.SetSource(sourceFile);
                 return new CompileResult(true);
             } else {
                 ast = null;

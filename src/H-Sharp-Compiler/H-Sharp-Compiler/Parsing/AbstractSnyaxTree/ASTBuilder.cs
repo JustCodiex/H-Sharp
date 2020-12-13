@@ -661,11 +661,10 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
         private void ApplyWhileStatementGrammar(List<ASTNode> nodes, int from) {
             if (TypeSequence<ASTNode, ASTNode, IExpr, IExpr>.Match(nodes, from)) {
-                ApplySingleNodeGrammar(nodes[from + 1], true);
+                ApplySingleNodeGrammar(nodes[from + 1], true); // NOTE: may do unexpected stuff later on <-> Be careful here, may need its own function
                 ApplySingleNodeGrammar(nodes[from + 2], true);
                 nodes[from] = new WhileStatement(nodes[from + 1] as IExpr, nodes[from + 2] as IExpr, nodes[from].Pos);
                 nodes.RemoveRange(from + 1, 2);
-                return;
             } else {
                 throw new SyntaxError(-1, nodes[from].Pos, string.Empty);
             }

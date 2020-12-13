@@ -31,7 +31,7 @@ namespace HSharp {
                 string[] source = Directory.GetFiles("regression\\", "*.hsharp");
 
                 for (int i = 0; i < source.Length; i++) {
-                    SourceProject project = new SourceProject(source[i]);
+                    SourceProject project = new SourceProject(null, null, SourceProjectFile.FromSource(source[i]));
                     var r = Current.CompileProject(project);
                     if (r) {
                         s++;
