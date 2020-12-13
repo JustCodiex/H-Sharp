@@ -184,6 +184,7 @@ namespace HSharp.Compiling {
                 ValueListInitializerNode valListNode => this.CompileValueListInitializer(valListNode, context),
                 LookupNode lookupNode => this.CompileLookupNode(lookupNode, context),
                 IfStatement ifStatement => this.CompileBranch(ifStatement, context),
+                WhileStatement whileStatent => this.CompileWhileNode(whileStatent, context),
                 _ => throw new NotImplementedException(),
             };
             return instructions;
@@ -215,6 +216,8 @@ namespace HSharp.Compiling {
                 "|" => Bytecode.OR,
                 "&" => Bytecode.AND,
                 "=" => throw new Exception(),
+                "<" => Bytecode.LE,
+                ">" => Bytecode.GE,
                 _ => Bytecode.NOP,
             };
             instructions.AddRange(this.CompileNode(op.Left, context));
@@ -235,6 +238,8 @@ namespace HSharp.Compiling {
             Bytecode bytecode = op.Op switch
             {
                 "!" => Bytecode.NEG,
+                "++" => Bytecode.INC,
+                "--" => Bytecode.DEC,
                 _ => Bytecode.NOP,
             };
             instructions.AddRange(this.CompileNode(op.Expr, context)); if (!context.Result) {
@@ -244,7 +249,11 @@ namespace HSharp.Compiling {
                 context.UpdateResultIfErr(new CompileResult(false, $"Unknown unary operation '{op.Content}'").SetOrigin(op.Pos));
                 return new List<ByteInstruction>();
             }
-            instructions.Add(new ByteInstruction(bytecode));
+            if (bytecode == Bytecode.INC || bytecode == Bytecode.DEC) {
+                instructions.Add(new ByteInstruction(bytecode, op.IsPostOp ? (byte)1 : (byte)0));
+            } else {
+                instructions.Add(new ByteInstruction(bytecode));
+            }
             return instructions;
         }
 
@@ -423,6 +432,15 @@ namespace HSharp.Compiling {
             // Return instructions
             return instructions;
 
+        }
+
+        private List<ByteInstruction> CompileWhileNode(WhileStatement whileStatement, CompileContext context) {
+            var res = this.CompileNode(whileStatement.Condition as ASTNode, context);
+            var body = this.CompileNode(whileStatement.Body as ASTNode, context);
+            res.Add(new ByteInstruction(Bytecode.JMPIFF, body.Count + 1));
+            body.Add(new ByteInstruction(Bytecode.JMP, -(body.Count + 1 + res.Count)));
+            res.AddRange(body);
+            return res;
         }
 
     }

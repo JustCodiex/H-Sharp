@@ -17,11 +17,17 @@ namespace HSharp.Analysis.Typechecking {
     
     public class Typechecker {
     
+        private ValueType Bool { get; set; }
+        private ValueType Int32 { get; set; }
+
         public Typechecker() {
 
         }
 
         public CompileResult Typecheck(AST ast, Domain globDomain) {
+
+            this.Bool = globDomain.First<ValueType>("bool");
+            this.Int32 = globDomain.First<ValueType>("int");
 
             TypeEnvironment tenv = new TypeEnvironment();
             foreach (ASTNode node in ast.Root) {
@@ -57,6 +63,7 @@ namespace HSharp.Analysis.Typechecking {
             IndexerNode indexerNode => this.TypecheckIndexerOperation(indexerNode, tenv, domain),
             IfStatement ifStatement => this.TypecheckIfStatement(ifStatement, tenv, domain),
             ElseStatement elseStatement => this.TypecheckElseStatement(elseStatement, tenv, domain),
+            LoopNode loopNode => this.TypecheckLoop(loopNode, tenv, domain),
             ILiteral lit => this.TypecheckConstOperation(lit, domain),
             _ => (new CompileResult(false, $"Unsupported type-checkable element '{node.NodeType}'").SetOrigin(node), null),
         };
@@ -205,6 +212,12 @@ namespace HSharp.Analysis.Typechecking {
                         } else {
                             return (new CompileResult(false).SetOrigin(binop), null);
                         }
+                    case "<":
+                        if (expr1.Item2 == expr2.Item2) {
+                            return (new CompileResult(true), this.Bool);
+                        } else {
+                            return (new CompileResult(false).SetOrigin(binop), null);
+                        }
                     default:
                         return (new CompileResult(false, $"Unknown operator '{binop.Op}'.").SetOrigin(binop.Pos), null);
                 }
@@ -221,11 +234,15 @@ namespace HSharp.Analysis.Typechecking {
             if (expr.Item2 is ValueType vt) {
                 switch (unop.Op) {
                     case "!":
-                        if (vt.Name.CompareTo("bool") == 0) {
+                        if (vt == this.Bool) {
                             return (new CompileResult(true), expr.Item2);
                         } else {
                             return (new CompileResult(false, $"Invalid operator '!' on operand of type \"{vt}\".").SetOrigin(unop), null);
                         }
+                    case "++":
+                        return (new CompileResult(true), vt);
+                    case "--":
+                        return (new CompileResult(true), vt);
                     default:
                         return (new CompileResult(false, $"Unknown operator '{unop.Op}'.").SetOrigin(unop), null);
                 }
@@ -251,8 +268,8 @@ namespace HSharp.Analysis.Typechecking {
 
         private (CompileResult, IValType) TypecheckConstOperation(ILiteral lit, Domain domain) => lit switch
         {
-            IntLitNode => (new CompileResult(true), domain.First<ValueType>("int")),
-            BoolLitNode => (new CompileResult(true), domain.First<ValueType>("bool")),
+            IntLitNode => (new CompileResult(true), this.Int32),
+            BoolLitNode => (new CompileResult(true), this.Bool),
             _ => (new CompileResult(false).SetOrigin((lit as ASTNode).Pos), null),
         };
 
@@ -443,7 +460,7 @@ namespace HSharp.Analysis.Typechecking {
             var indexedResult = this.TypecheckNode(lookupNode.Index, tenv, domain);
             var result = this.TypecheckNode(lookupNode.Left as ASTNode, tenv, domain);
             if (result.Item2 is ArrayType array) {
-                if (indexedResult.Item2 == domain.Get<ValueType>("int")) {
+                if (indexedResult.Item2 == this.Int32) {
                     return (new CompileResult(true), this.TypeOf(array.ReferencedType));
                 } else {
                     return (new CompileResult(false, "Invalid Indexing Type").SetOrigin(lookupNode), null);
@@ -464,7 +481,7 @@ namespace HSharp.Analysis.Typechecking {
                 return condition;
             }
 
-            if (condition.Item2 == domain.First<ValueType>("bool") || this.IsSubtype(condition.Item2, domain.First<ValueType>("int"), out _)) {
+            if (this.IsValidConditionType(condition.Item2)) {
                 var bodyResult = this.TypecheckNode(statement.Body as ASTNode, tenv, domain);
                 if (!bodyResult.Item1) {
                     return bodyResult;
@@ -491,6 +508,24 @@ namespace HSharp.Analysis.Typechecking {
             return (new CompileResult(true), VoidType.Void);
         }
 
+        private (CompileResult, IValType) TypecheckLoop(LoopNode loop, TypeEnvironment tenv, Domain domain) {
+            var condition = this.TypecheckNode(loop.Condition as ASTNode, tenv, domain);
+            if (!condition.Item1) {
+                return condition;
+            }
+            if (!this.IsValidConditionType(condition.Item2)) {
+                return (new CompileResult(false, $"Expected a bool or integer type but found '{condition.Item2}'").SetOrigin(loop.Condition as ASTNode), null);
+            }
+            var body = this.TypecheckNode(loop.Body as ASTNode, tenv, domain);
+            if (!body.Item1) {
+                return body;
+            }
+            /*if (loop is ForStatement) {
+                ...
+            }*/
+            return (new CompileResult(true), VoidType.Void);
+        }
+
         private bool IsSubtype(IValType subType, IValType baseType, out string err) {
             if (subType is null || baseType is null) {
                 err = "Fatal compiler error !!!!";
@@ -512,6 +547,9 @@ namespace HSharp.Analysis.Typechecking {
             }
         }
 
+        private bool IsValidConditionType(IValType type)
+            => type == this.Bool || this.IsSubtype(type, this.Int32, out _);
+
         private bool IsAllSubtypeOf(IValType baseType, List<IValType> valtypes, out string err) {
             err = string.Empty;
             for (int i = 0; i < valtypes.Count; i++) {
@@ -528,7 +566,6 @@ namespace HSharp.Analysis.Typechecking {
             _ => this.TypeOf(identifier.Content, domain)
         };
         
-
         private IValType TypeOf(HSharpType type) {
             if (type is IRefType) {
                 return new ReferenceType(type);

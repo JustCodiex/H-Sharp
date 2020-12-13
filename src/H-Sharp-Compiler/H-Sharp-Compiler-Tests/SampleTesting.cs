@@ -1,5 +1,6 @@
 ﻿using HSharp;
 using HSharp.Analysis.Typechecking;
+using HSharp.Analysis.Verifying;
 using HSharp.Compiling;
 using HSharp.Parsing;
 using HSharp.Parsing.AbstractSnyaxTree;
@@ -13,6 +14,7 @@ namespace H_Sharp_Compiler_Tests {
     [TestOf(typeof(ASTCompiler))]
     [TestOf(typeof(ASTBuilder))]
     [TestOf(typeof(Typechecker))]
+    [TestOf(typeof(VarsVerifier))]
     public class SampleTesting { // Note, only testing if the compiler will compile, does not perform a correctness check!
 
         Compiler compiler;
@@ -197,7 +199,6 @@ namespace H_Sharp_Compiler_Tests {
         }
 
         [Test]
-        [Ignore("Not fully implemented")] // Ignore for now
         [Category("Flow Control (While)")]
         public void Control3() {
             string[] sample = {

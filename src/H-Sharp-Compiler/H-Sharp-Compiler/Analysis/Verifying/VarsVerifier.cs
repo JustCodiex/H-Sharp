@@ -128,6 +128,10 @@ namespace HSharp.Analysis.Verifying {
                 case ElseStatement elseStatement:
                     this.VarsNode(elseStatement.Body as ASTNode, scope);
                     break;
+                case WhileStatement whileStatement:
+                    this.VarsNode(whileStatement.Condition as ASTNode, scope);
+                    this.VarsNode(whileStatement.Body as ASTNode, scope); // If Scope node it's handled properly
+                    break;
                 case ThisNode:
                 case BaseNode:
                 case IntLitNode:
