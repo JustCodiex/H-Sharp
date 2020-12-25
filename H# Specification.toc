@@ -1,14 +1,18 @@
 \babel@toc {english}{}
 \contentsline {section}{Abstract}{1}{section*.2}%
 \contentsline {section}{Grammar}{2}{section*.4}%
-\contentsline {section}{Operational Semantics}{7}{section*.6}%
-\contentsline {subsubsection}{General Semantics}{7}{section*.8}%
-\contentsline {subsubsection}{Classes}{7}{section*.11}%
-\contentsline {subsubsection}{Objects}{7}{section*.13}%
-\contentsline {subsubsection}{Structs}{7}{section*.15}%
-\contentsline {subsubsection}{Union}{7}{section*.17}%
-\contentsline {subsubsection}{Enum}{7}{section*.19}%
-\contentsline {subsubsection}{Traits}{7}{section*.21}%
-\contentsline {section}{Type Semantics}{8}{section*.23}%
-\contentsline {section}{Compilation Semantics}{9}{section*.27}%
-\contentsline {section}{Bytecode Semantics}{10}{section*.29}%
+\contentsline {section}{Operational Semantics}{8}{section*.6}%
+\contentsline {subsection}{Literal Semantics}{8}{section*.8}%
+\contentsline {subsection}{General Semantics}{9}{section*.14}%
+\contentsline {subsubsection}{Scope and Variable Operations}{9}{section*.16}%
+\contentsline {subsubsection}{Numeric Operations}{9}{section*.19}%
+\contentsline {subsection}{Classes}{12}{section*.24}%
+\contentsline {subsection}{Objects}{13}{section*.26}%
+\contentsline {subsection}{Structs}{14}{section*.28}%
+\contentsline {subsection}{Union}{15}{section*.30}%
+\contentsline {subsection}{Enum}{16}{section*.32}%
+\contentsline {subsection}{Traits}{17}{section*.34}%
+\contentsline {subsection}{Pattern-Matching}{18}{section*.36}%
+\contentsline {section}{Type Semantics}{19}{section*.38}%
+\contentsline {section}{Compilation Semantics}{20}{section*.42}%
+\contentsline {section}{Bytecode Semantics}{21}{section*.44}%

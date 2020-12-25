@@ -88,7 +88,7 @@
 }
 
 %% Semantic commands
-\newcommand{\envall}{\rho, \mu, \phi, \kappa, \sigma \vdash}
+\newcommand{\envall}{\rho, \kappa, \phi, \sigma \vdash}
 \newcommand{\envallm}[1]{\rho, \mu, \phi, \kappa, \sigma #1 \vdash}
 \newcommand{\typemodel}{\theta, \gamma, \eta \vdash}
 \newcommand{\typeis}[1]{\ \texttt{:} \ #1}
@@ -145,6 +145,7 @@ If multiple elements can occur - and it'd be convenient, the element may be suff
 	\alt \glit{sizeof($TypeId$}\glit{)} | \glit{addressof($Id$}\glit{)} | \glit{typeof($Expr$}\glit{)}
 	\alt $Assignment$
 	\alt $Literal$
+	\alt $RangeCheck$
 	
 	\gtext{LambdaExpr} ::= \glit{(}$Param$\glit{) =>} $Expr$
 	
@@ -156,6 +157,8 @@ If multiple elements can occur - and it'd be convenient, the element may be suff
 	
 	\gtext{Statement} ::= $Assignment$\glit{;} | $ControlStatement$ | $MatchStatement$\glit{;}
 	\alt $TryCatchStatement$
+	
+	\newpage	
 	
 	\gtext{ControlStatement} ::= \glit{if} $Expr$ $Scope$
 	\alt \glit{if} $Expr$ $Scope$ \glit{else} $Scope$
@@ -169,8 +172,6 @@ If multiple elements can occur - and it'd be convenient, the element may be suff
 	\alt \glit{throw} $TypeID$\glit{(}$Argument$\glit{)}
 	\alt \glit{return} $Expr$\glit{;}
 	\alt \glit{break;}
-	
-	\newpage	
 	
 	\gtext{MatchStatement} ::= $Expr$ \glit{match \{} $MatchCase$ \glit{\}} 
 	
@@ -196,6 +197,8 @@ If multiple elements can occur - and it'd be convenient, the element may be suff
 	\alt $Id$ \glit{*=} $Expr$ | $Id$ \glit{/=} $Expr$
 	\alt $Id$ \glit{\&=} $Expr$ | $Id$ \glit{|=} $Expr$
 	\alt $Id$ \glit{\%=} $Expr$
+	
+	\newpage	
 	
 	\gtext{Declaration} ::=  $VarDecl$ | $FuncDecl$ % Variable declaration
 	\alt $ClassDecl$ | $StaticClassDecl$ |  $TraitDecl$ % Ref types
@@ -318,18 +321,31 @@ If multiple elements can occur - and it'd be convenient, the element may be suff
 	
 	\gtext{Name} ::= $Id$ | $Name$\glit{.}$Name$	
 	
-	\gtext{BinaryOp} ::= \glit{+} | \glit{-} | \glit{*} | \glit{/} | \glit{\%} | \glit{\textless} | \glit{\textgreater} | \glit{\textless}= | \glit{\textgreater}= | \glit{==} | \glit{!=}
-	\alt \glit{\textbar\textbar} | $\&\&$ | \glit{\textbar} | $\&$ | \glit{\textless\textless} | \glit{\textgreater\textgreater} | \glit{=>} | \glit{::} | \glit{??} | \glit{..}
+	\gtext{RelativeComparison} ::=  \glit{\textless} | \glit{\textgreater} | \glit{\textless}= | \glit{\textgreater}=
+	
+	\gtext{RelativeOrEqual} ::= $RelativeComparisonOp$ | \glit{==} | \glit{!=}
+	
+	\gtext{BinaryOp} ::= \glit{+} | \glit{-} | \glit{*} | \glit{/} | \glit{\%} 
+	\glit{\textbar\textbar} | $\&\&$ | \glit{\textbar} | 
+	\alt  $\&$ | \glit{\textless\textless} | \glit{\textgreater\textgreater} | \glit{=>} | \glit{::} | \glit{??} | \glit{..} | 
+	\alt  $RelativeOrEqual$
 	
 	\gtext{UnaryOp} ::= \glit{-} | \glit{!} | \glit{\#} | \glit{++} | \glit{--} | \glit{*}
+
+	\gtext{RangeCheck} ::= $NumericOrId$ $RelativeOrEqual$ $NumericOrId$ $RelativeOrEqual$ $NumericOrId$
+	\alt $NumericOrId$ $RelativeOrEqual$ $RangeCheck$
 	
-	\gtext{LiteralNoNull}	::= $IntLit$ | $FloatLit$ | $DoubleLit$ | $BoolLit$ | $CharLit$ | $StringLit$
+	\gtext{NumericOrId} ::= $NumericLit$ | $Id$
+	
+	\gtext{NumericLit} :: $IntLit$ | $FloatLit$ | $DoubleLit$
+	
+	\gtext{LiteralNoNull}	::= $NumericLit$ | $BoolLit$ | $CharLit$ | $StringLit$
 	
 	\gtext{Literal}	::= $LiteralNoNull$ | $NullLit$
 	
-	\gtext{Letter} ::= [\glit{a}-\glit{Z}]
+	\gtext{Digit} ::= $x \in \{$0, 1, 2, 3, 4, 5, 7, 8, 9$\}$
 	
-	\gtext{Digit} ::= [\glit{0}-\glit{9}]
+	\gtext{Letter} ::= $\{$ x | x $\in$ \glit{UTF-8} $\land \ x \notin Digit \ \}$
 	
 	\gtext{IntLit} ::= $Digit^+$
 	
@@ -348,34 +364,233 @@ If multiple elements can occur - and it'd be convenient, the element may be suff
 \end{grammar}
 \newpage
 \newsection{Operational Semantics}
-\newsubsubsection{General Semantics}
+The semantics in this document form a base for the operational rules of the language. These rules will be presented in the form of inference rules and explained code samples and generalisations. Inference rules may omit details not of relevance to a specific operational semantic.\\\\
+The semantics make the assumption that there are at least four basic environments available when evaluating the language. Implementation wise these may be spread out over more specialized environments.
+\begin{enumerate}
+	\item $\rho$: First environment is the variable environment and will contain all the variables in scope. Elements within this environment may consist of their atomic value v or the reference tuple $(\ell, \tau)$. Where $\ell$ is a pointer to the value in the $\sigma$ environment. $\tau$ is the associated type of the stored object.
+	\item $\kappa$: Second environment is the \textit{instantiable} type environment. Which is a read-only  environment. This may be referred to as the \textit{class} environment - as that is the original purpose. This environment is fully populated before evaluation.
+	\item $\phi$: Third environment contains first-order functions.
+	\item $\sigma$: Fourth environment represents the heap and is where heap-allocated objects reside.
+\end{enumerate}
+\newsubsection{Literal Semantics}
+The first literal semantics we'll define is the integer and natural number literals. From below no order  is defined for which to infer integers to by default. Thus we define it to be \texttt{Int32} (as is the case in many other languages). We may also drop the suffixes defined in the rules states below.
 \begin{figure}[H]
 \centering
 	\begin{mathparpagebreakable}
-		\infer[VariableLookup]
-		{\envall \rho (x) = v \neq (\ell, \omega, \sigma)}
-		{\envall x \Rightarrow v, \sigma}
+		\infer[Int8 Literal]
+		{i \in \mathbb{Z} \rspace -2^{7} \leq i < 2^{7} \rspace v=i}
+		{\envall i \Rightarrow v, \sigma}
 		\and
-		\infer[HeapObjectLookup]
-		{\envall \rho (x) = (\ell, \omega, \sigma) \rspace \sigma(\ell)=v \rspace \omega = \texttt{O}}
-		{\envall x \Rightarrow v, \sigma}
+		\infer[Int16 Literal]
+		{i \in \mathbb{Z} \rspace -2^{15} \leq i < 2^{15} \rspace v=i}
+		{\envall i \Rightarrow v, \sigma}
 		\and
-		\infer[HeapStringLookup]
-		{\envall \rho (x) = (\ell, \omega, \sigma) \rspace \sigma(\ell)=v \rspace \omega = \texttt{S}}
-		{\envall x \Rightarrow v, \sigma}
+		\infer[Int32 Literal]
+		{i \in \mathbb{Z} \rspace -2^{31} \leq i < 2^{31} \rspace v=i}
+		{\envall i \Rightarrow v, \sigma}
 		\and
-		\infer[HeapArrayLookup]
-		{\envall \rho (x) = (\ell, \omega, \sigma) \rspace \sigma(\ell)=v \rspace \omega = \texttt{A}}
-		{\envall x \Rightarrow v, \sigma}
+		\infer[Int64 Literal]
+		{i \in \mathbb{Z} \rspace -2^{63} \leq i < 2^{63} \rspace v=i}
+		{\envall i\texttt{l} \Rightarrow v, \sigma}
+		\and
+		\infer[UInt8 Literal]
+		{i \in \mathbb{N} \rspace 0 \leq i < 2^{8} \rspace v=i}
+		{\envall i \Rightarrow v, \sigma}
+		\and
+		\infer[UInt16 Literal]
+		{i \in \mathbb{N} \rspace 0 \leq i < 2^{16} \rspace v=i}
+		{\envall i \Rightarrow v, \sigma}
+		\and
+		\infer[UInt32 Literal]
+		{i \in \mathbb{N} \rspace 0 \leq i < 2^{32} \rspace v=i}
+		{\envall i\texttt{u} \Rightarrow v, \sigma}
+		\and
+		\infer[UInt64 Literal]
+		{i \in \mathbb{N} \rspace 0 \leq i < 2^{64} \rspace v=i}
+		{\envall i\texttt{ul} \Rightarrow v, \sigma}
 		\and
 	\end{mathparpagebreakable}
 \end{figure}\noindent
-\newsubsubsection{Classes}
-\newsubsubsection{Objects}
-\newsubsubsection{Structs}
-\newsubsubsection{Union}
-\newsubsubsection{Enum}
-\newsubsubsection{Traits}
+Likewise there are two floating-point type literals.
+\begin{figure}[H]
+\centering
+	\begin{mathparpagebreakable}
+		\infer[Real32 Literal]
+		{i \in \mathbb{R} \rspace v=i}
+		{\envall r \texttt{f} \Rightarrow v, \sigma}
+		\and
+		\infer[Real64 Literal]
+		{i \in \mathbb{R} \rspace v=i}
+		{\envall r \Rightarrow v, \sigma}
+		\and
+	\end{mathparpagebreakable}
+\end{figure}\noindent
+The semantics for boolean literals are rather simple:
+\begin{figure}[H]
+\centering
+	\begin{mathparpagebreakable}
+		\infer[True-Literal]
+		{\ }
+		{\envall \texttt{true} \Rightarrow \text{true}}
+		\and
+		\infer[False-Literal]
+		{\ }
+		{\envall \texttt{false} \Rightarrow \text{false}}
+	\end{mathparpagebreakable}
+\end{figure}\noindent
+\newpage\noindent
+Lastly, the two character based literals:
+\begin{figure}[H]
+\centering
+	\begin{mathparpagebreakable}
+		\infer[Char-Literal]
+		{c \in \textit{UTF-8} \rspace v=c}
+		{\envall \texttt{'}c\texttt{'} \Rightarrow v}
+		\and
+		\infer[String-Literal]
+		{c_i \in \textit{UTF-8} \text{ for } i=0,\dots, n \rspace v=c_0\cdot c_1\cdot ... \cdot c_n }
+		{\envall \texttt{"}c_0,\dots, c_n\texttt{"} \Rightarrow v}
+	\end{mathparpagebreakable}
+\end{figure}\noindent
+To note, the $\cdot$ operation described in the inference rule above is the concatenation operator.
+\newsubsection{General Semantics}
+Some of the more general operations are defined here. That is, operations not reliant on custom-defined objects and their overriding operator behaviour.
+\newsubsubsection{Scope and Variable Operations}
+The first semantics to visit are concerning the very basics of evaluating scopes and variables.
+\begin{figure}[H]
+\centering
+	\begin{mathparpagebreakable}
+		\infer[Atomic-Lookup]
+		{\rho(x)=v\neq(\ell,\tau)}
+		{\envall x \Rightarrow v}
+		\and
+		\infer[Reference-Lookup]
+		{\rho(x)=(\ell,\tau) \rspace v=\sigma(\ell)}
+		{\envall x \Rightarrow v}
+	\end{mathparpagebreakable}
+\end{figure}\noindent
+\newsubsubsection{Numeric Operations}
+\begin{figure}[H]
+\centering
+	\begin{mathparpagebreakable}
+		\infer[Numeric-Addition]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v=v_1+v_2}
+		{\envall e_1\texttt{+}e_2 \Rightarrow v,\sigma''}
+		\and
+		\infer[Numeric-Subtraction]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v=v_1-v_2}
+		{\envall e_1\texttt{-}e_2 \Rightarrow v,\sigma''}
+		\and
+		\infer[Numeric-Multiplication]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v=v_1*v_2}
+		{\envall e_1\texttt{*}e_2 \Rightarrow v,\sigma''}
+		\and
+		\infer[Numeric-Division]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v=\frac{v_1}{v_2}}
+		{\envall e_1\texttt{/}e_2 \Rightarrow v,\sigma''}
+		\and
+		\infer[Numeric-Negation]
+		{\envall e \Rightarrow v, \sigma' \rspace v\in \mathbb{R} \rspace v'=-v}
+		{\envall \texttt{-}e \Rightarrow v',\sigma'}
+		\and
+		\infer[Numeric-Increment-Post]
+		{v=\rho(x) \rspace v\in \mathbb{R} \rspace v'=v + 1 \rspace \rho[x\mapsto v']}
+		{\envall x\texttt{++} \Rightarrow v}
+		\and
+		\infer[Numeric-Increment-Pre]
+		{v=\rho(x) \rspace v\in \mathbb{R} \rspace v'=v + 1 \rspace \rho[x\mapsto v']}
+		{\envall \texttt{++}x \Rightarrow v'}
+		\and
+		\infer[Numeric-Decrement-Post]
+		{v=\rho(x) \rspace v\in \mathbb{R} \rspace v'=v - 1 \rspace \rho[x\mapsto v']}
+		{\envall x\texttt{--} \Rightarrow v}
+		\and
+		\infer[Numeric-Decrement-Pre]
+		{v=\rho(x) \rspace v\in \mathbb{R} \rspace v'=v - 1 \rspace \rho[x\mapsto v']}
+		{\envall \texttt{--}x \Rightarrow v'}
+		\and
+	\end{mathparpagebreakable}
+\end{figure}\noindent
+For the last four semantic rules above, it's noteworthy that the increment and decrement operators may only be used on identifiers.
+\newpage
+The next couple of numeric rules are for comparison between two numeric values.
+\begin{figure}[H]
+\centering
+	\begin{mathparpagebreakable}
+		\infer[Numeric-LessThan-True]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v_1<v_2}
+		{\envall e_1\texttt{<}e_2 \Rightarrow \texttt{true},\sigma''}
+		\and
+		\infer[Numeric-LessThan-False]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v_1\geq v_2}
+		{\envall e_1\texttt{<}e_2 \Rightarrow \texttt{false},\sigma''}
+		\and
+		\infer[Numeric-GreaterThan-True]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v_1>v_2}
+		{\envall e_1\texttt{>}e_2 \Rightarrow \texttt{true},\sigma''}
+		\and
+		\infer[Numeric-GreaterThan-False]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v_1\leq v_2}
+		{\envall e_1\texttt{>}e_2 \Rightarrow \texttt{false},\sigma''}
+		\and
+		\infer[Numeric-LessThanOrEqual-True]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v_\leq v_2}
+		{\envall e_1\texttt{<=}e_2 \Rightarrow \texttt{true},\sigma''}
+		\and
+		\infer[Numeric-LessThanOrEqual-False]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v_1 > v_2}
+		{\envall e_1\texttt{<=}e_2 \Rightarrow \texttt{false},\sigma''}
+		\and
+		\infer[Numeric-GreaterThanOrEqual-True]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v_1 \geq v_2}
+		{\envall e_1\texttt{>=}e_2 \Rightarrow \texttt{true},\sigma''}
+		\and
+		\infer[Numeric-GreaterThanOrEqual-False]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v_1 < v_2}
+		{\envall e_1\texttt{>=}e_2 \Rightarrow \texttt{false},\sigma''}
+		\and
+		\infer[Numeric-IsEqual-True]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v_1=v_2}
+		{\envall e_1\texttt{==}e_2 \Rightarrow \texttt{true},\sigma''}
+		\and
+		\infer[Numeric-IsEqual-False]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v_1 \neq v_2}
+		{\envall e_1\texttt{==}e_2 \Rightarrow \texttt{false},\sigma''}
+		\and
+		\infer[Numeric-IsNotEqual-True]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v_1\neq v_2}
+		{\envall e_1\texttt{!=}e_2 \Rightarrow \texttt{true},\sigma''}
+		\and
+		\infer[Numeric-IsNotEqual-False]
+		{\envall e_1 \Rightarrow v_1, \sigma' \rspace \rho,\kappa,\psi,\sigma'\vdash e_2 \Rightarrow v_2,\sigma'' \rspace v_1,v_2\in \mathbb{R} \rspace v_1= v_2}
+		{\envall e_1\texttt{!=}e_2 \Rightarrow \texttt{false},\sigma''}
+		\and
+	\end{mathparpagebreakable}
+\end{figure}\noindent
+\newpage
+Lastly, there's the range check operation. Semantically we can define it as:
+\begin{figure}[H]
+\centering
+	\begin{mathparpagebreakable}
+		\infer[Numeric-LessRangeCheck-True]
+		{Op_i \in \{ <, <=\} \ \text{for} \ i=0 ... n \rspace \rho,\kappa,\psi,\sigma^{i-1}\vdash e_i \Rightarrow v_i, \sigma^i \ \text{for} \ i=0 ... n \\ v_i\in \mathbb{R} \ \text{for} \ i=0 ... n \rspace \forall(v_i,Op_i,v_{i+1}) \ v_i \ Op_i \ v_{i+1} }
+		{\envall e_0 \ Op_0 \ e_1 \ ... \ Op_{n-1} \ e_n  \Rightarrow \texttt{true},\sigma^n}
+	\end{mathparpagebreakable}
+\end{figure}\noindent
+\newpage
+\newsubsection{Classes}
+\newpage
+\newsubsection{Objects}
+\newpage
+\newsubsection{Structs}
+\newpage
+\newsubsection{Union}
+\newpage
+\newsubsection{Enum}
+\newpage
+\newsubsection{Traits}
+\newpage
+\newsubsection{Pattern-Matching}
 \newpage
 \newsection{Type Semantics}
 \begin{figure}[H]
@@ -425,8 +640,8 @@ If multiple elements can occur - and it'd be convenient, the element may be suff
 	\addvspace{0.35cm}
         \begin{equation*}			
 			\texttt{base}(\tau_1, \tau_2) = \begin{cases} 
-            \tau_1 & t_2 <: t_1  \\
-            \tau_2 & t_1 <: t_2     
+            \tau_1 & \text{if } t_2 <: t_1  \\
+            \tau_2 & \text{if } t_1 <: t_2     
         	\end{cases}
 		\end{equation*}
 	}

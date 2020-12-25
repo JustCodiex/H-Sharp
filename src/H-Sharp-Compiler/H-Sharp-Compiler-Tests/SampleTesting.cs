@@ -207,9 +207,37 @@ namespace H_Sharp_Compiler_Tests {
                 "   x++;",
                 "}"
             };
-            var result = this.compiler.CompileProject(FromText(sample, "Flow2", "flow2.bin"));
+            var result = this.compiler.CompileProject(FromText(sample, "Flow3", "flow3.bin"));
             Assert.That(result.Success);
         }
+
+        [Test]
+        [Category("Flow Control (While)")]
+        public void Control4() {
+            string[] sample = {
+                "int x = 0;",
+                "while (x < 100) {",
+                "   x++;",
+                "}"
+            };
+            var result = this.compiler.CompileProject(FromText(sample, "Flow4", "flow4.bin"));
+            Assert.That(result.Success);
+        }
+
+
+        [Test]
+        [Category("Flow Control (Do-While)")]
+        public void Control5() {
+            string[] sample = {
+                "int x = 0;",
+                "do {",
+                "   x++;",
+                "} while x < 100;"
+            };
+            var result = this.compiler.CompileProject(FromText(sample, "Flow5", "flow5.bin"));
+            Assert.That(result.Success);
+        }
+
         #endregion
 
         #region Function Declaration

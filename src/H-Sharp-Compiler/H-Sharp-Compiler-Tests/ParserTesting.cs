@@ -89,6 +89,24 @@ namespace H_Sharp_Compiler_Tests {
             Assert.IsInstanceOf<BinOpNode>((ast.Root.Sequence[1] as WhileStatement).Condition, "WhileStatement condition was invalid");
         }
 
+        [Test]
+        [Category("Loop Testing")]
+        public void DoWhileParse1() {
+            string[] code = {
+                "int x = 0;",
+                "do {",
+                "   x++;",
+                "} while x < 100;"
+            };
+            var ast = this.BuildAST(ToSingleText(code));
+            Assert.That(ast is not null, () => "Expected a root AST node");
+            Assert.IsInstanceOf<VarDeclNode>(ast.Root.Sequence[0], "VarDeclNode not found");
+            Assert.IsInstanceOf<DoWhileStatement>(ast.Root.Sequence[1], "DoWhileStatement not found");
+            Assert.IsInstanceOf<ScopeNode>((ast.Root.Sequence[1] as DoWhileStatement).Body, "WhileStatement body was invalid");
+            Assert.IsInstanceOf<UnaryOpNode>(((ast.Root.Sequence[1] as DoWhileStatement).Body as ScopeNode)[0], "WhileStatement body (unop) was invalid");
+            Assert.IsInstanceOf<BinOpNode>((ast.Root.Sequence[1] as DoWhileStatement).Condition, "WhileStatement condition was invalid");
+        }
+
         #endregion
 
     }

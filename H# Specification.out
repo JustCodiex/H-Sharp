@@ -1,13 +1,17 @@
 \BOOKMARK [1][-]{section*.2}{Abstract}{}% 1
 \BOOKMARK [1][-]{section*.4}{Grammar}{}% 2
 \BOOKMARK [1][-]{section*.6}{Operational Semantics}{}% 3
-\BOOKMARK [2][-]{section*.8}{General Semantics}{section*.6}% 4
-\BOOKMARK [3][-]{section*.11}{Classes}{section*.8}% 5
-\BOOKMARK [3][-]{section*.13}{Objects}{section*.8}% 6
-\BOOKMARK [3][-]{section*.15}{Structs}{section*.8}% 7
-\BOOKMARK [3][-]{section*.17}{Union}{section*.8}% 8
-\BOOKMARK [3][-]{section*.19}{Enum}{section*.8}% 9
-\BOOKMARK [3][-]{section*.21}{Traits}{section*.8}% 10
-\BOOKMARK [1][-]{section*.23}{Type Semantics}{}% 11
-\BOOKMARK [1][-]{section*.27}{Compilation Semantics}{}% 12
-\BOOKMARK [1][-]{section*.29}{Bytecode Semantics}{}% 13
+\BOOKMARK [2][-]{section*.8}{Literal Semantics}{section*.6}% 4
+\BOOKMARK [2][-]{section*.14}{General Semantics}{section*.6}% 5
+\BOOKMARK [3][-]{section*.16}{Scope and Variable Operations}{section*.14}% 6
+\BOOKMARK [3][-]{section*.19}{Numeric Operations}{section*.14}% 7
+\BOOKMARK [2][-]{section*.24}{Classes}{section*.6}% 8
+\BOOKMARK [2][-]{section*.26}{Objects}{section*.6}% 9
+\BOOKMARK [2][-]{section*.28}{Structs}{section*.6}% 10
+\BOOKMARK [2][-]{section*.30}{Union}{section*.6}% 11
+\BOOKMARK [2][-]{section*.32}{Enum}{section*.6}% 12
+\BOOKMARK [2][-]{section*.34}{Traits}{section*.6}% 13
+\BOOKMARK [2][-]{section*.36}{Pattern-Matching}{section*.6}% 14
+\BOOKMARK [1][-]{section*.38}{Type Semantics}{}% 15
+\BOOKMARK [1][-]{section*.42}{Compilation Semantics}{}% 16
+\BOOKMARK [1][-]{section*.44}{Bytecode Semantics}{}% 17

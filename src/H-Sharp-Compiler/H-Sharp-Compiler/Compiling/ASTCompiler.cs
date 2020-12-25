@@ -184,7 +184,8 @@ namespace HSharp.Compiling {
                 ValueListInitializerNode valListNode => this.CompileValueListInitializer(valListNode, context),
                 LookupNode lookupNode => this.CompileLookupNode(lookupNode, context),
                 IfStatement ifStatement => this.CompileBranch(ifStatement, context),
-                WhileStatement whileStatent => this.CompileWhileNode(whileStatent, context),
+                WhileStatement whileStatement => this.CompileWhileNode(whileStatement, context),
+                DoWhileStatement doWhileStatement => this.CompileDoWhileNode(doWhileStatement, context),
                 _ => throw new NotImplementedException(),
             };
             return instructions;
@@ -441,6 +442,14 @@ namespace HSharp.Compiling {
             body.Add(new ByteInstruction(Bytecode.JMP, -(body.Count + 1 + res.Count)));
             res.AddRange(body);
             return res;
+        }
+
+        private List<ByteInstruction> CompileDoWhileNode(DoWhileStatement whileStatement, CompileContext context) {
+            var body = this.CompileNode(whileStatement.Body as ASTNode, context);
+            var condition = this.CompileNode(whileStatement.Condition as ASTNode, context);
+            condition.Add(new ByteInstruction(Bytecode.JMPIFT, -(condition.Count + 1 + body.Count)));
+            var result = body.Union(condition).ToList();
+            return result;
         }
 
     }

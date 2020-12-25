@@ -671,7 +671,14 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
         }
 
         private void ApplyDoStatementGrammar(List<ASTNode> nodes, int from) {
-            throw new NotImplementedException();
+            if (TypeSequence<ASTNode, ASTNode, IExpr, ASTNode, IExpr, SeperatorNode>.Match(nodes, from)) {
+                ApplySingleNodeGrammar(nodes[from + 1], true); // NOTE: may do unexpected stuff later on <-> Be careful here, may need its own function
+                ApplySingleNodeGrammar(nodes[from + 3], true);
+                nodes[from] = new DoWhileStatement(nodes[from + 1] as IExpr, nodes[from + 3] as IExpr, nodes[from].Pos);
+                nodes.RemoveRange(from + 1, 4);
+            } else {
+                throw new SyntaxError(-1, nodes[from].Pos, "Unexpected 'do' keyword found.");
+            }
         }
 
         private void ApplyForStatementGrammar(List<ASTNode> nodes, int from) {
