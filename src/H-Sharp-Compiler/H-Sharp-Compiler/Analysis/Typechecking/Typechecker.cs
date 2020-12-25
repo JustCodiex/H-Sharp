@@ -509,6 +509,16 @@ namespace HSharp.Analysis.Typechecking {
         }
 
         private (CompileResult, IValType) TypecheckLoop(LoopNode loop, TypeEnvironment tenv, Domain domain) {
+            if (loop is ForStatement f) {
+                var init = this.TypecheckNode(f.Init, tenv, domain);
+                if (!init.Item1) {
+                    return init;
+                }
+                var after = this.TypecheckNode(f.After as ASTNode, tenv, domain);
+                if (!after.Item1) {
+                    return after;
+                }
+            }
             var condition = this.TypecheckNode(loop.Condition as ASTNode, tenv, domain);
             if (!condition.Item1) {
                 return condition;
@@ -520,9 +530,6 @@ namespace HSharp.Analysis.Typechecking {
             if (!body.Item1) {
                 return body;
             }
-            /*if (loop is ForStatement) {
-                ...
-            }*/
             return (new CompileResult(true), VoidType.Void);
         }
 

@@ -238,6 +238,20 @@ namespace H_Sharp_Compiler_Tests {
             Assert.That(result.Success);
         }
 
+
+        [Test]
+        [Category("Flow Control (For)")]
+        public void Control6() {
+            string[] sample = {
+                "int x = 0;",
+                "for (int i = 0; i < 10; i++) {",
+                "   x++;",
+                "}"
+            };
+            var result = this.compiler.CompileProject(FromText(sample, "Flow5", "flow6.bin"));
+            Assert.That(result.Success);
+        }
+
         #endregion
 
         #region Function Declaration

@@ -22,7 +22,7 @@ namespace H_Sharp_Compiler_Tests {
 
         private AST BuildAST(string rawCode) {
             this.builder = new ASTBuilder(this.lexer.Lex(rawCode));
-            Assert.That(builder.Parse().Success is true); 
+            Assert.That(builder.Parse().Success is true);
             return this.builder.Build();
         }
 
@@ -105,6 +105,46 @@ namespace H_Sharp_Compiler_Tests {
             Assert.IsInstanceOf<ScopeNode>((ast.Root.Sequence[1] as DoWhileStatement).Body, "WhileStatement body was invalid");
             Assert.IsInstanceOf<UnaryOpNode>(((ast.Root.Sequence[1] as DoWhileStatement).Body as ScopeNode)[0], "WhileStatement body (unop) was invalid");
             Assert.IsInstanceOf<BinOpNode>((ast.Root.Sequence[1] as DoWhileStatement).Condition, "WhileStatement condition was invalid");
+        }
+
+        [Test]
+        [Category("Loop Testing")]
+        public void ForParse1() {
+            string[] code = {
+                "int x = 0;",
+                "for (int i = 0; i < 10; i++) {",
+                "   x++;",
+                "}"
+            };
+            var ast = this.BuildAST(ToSingleText(code));
+            Assert.That(ast is not null, () => "Expected a root AST node");
+            Assert.IsInstanceOf<VarDeclNode>(ast.Root.Sequence[0], "VarDeclNode not found");
+            Assert.IsInstanceOf<ForStatement>(ast.Root.Sequence[1], "ForStatement not found");
+            Assert.IsInstanceOf<ScopeNode>((ast.Root.Sequence[1] as ForStatement).Body, "ForStatement body was invalid");
+            Assert.IsInstanceOf<UnaryOpNode>(((ast.Root.Sequence[1] as ForStatement).Body as ScopeNode)[0], "ForStatement body (unop) was invalid");
+            Assert.IsInstanceOf<BinOpNode>((ast.Root.Sequence[1] as ForStatement).Condition, "ForStatement condition was invalid");
+            Assert.IsInstanceOf<UnaryOpNode>((ast.Root.Sequence[1] as ForStatement).After, "ForStatement after was invalid");
+            Assert.IsInstanceOf<VarDeclNode>((ast.Root.Sequence[1] as ForStatement).Init, "ForStatement init was invalid");
+        }
+
+        [Test]
+        [Category("Loop Testing")]
+        public void ForParse2() {
+            string[] code = {
+                "int i = 0;",
+                "for (i = 1; i < 10; i++) {",
+                "   x++;", // This right here should cause a compiler error later on (But should parse correctly).
+                "}"
+            };
+            var ast = this.BuildAST(ToSingleText(code));
+            Assert.That(ast is not null, () => "Expected a root AST node");
+            Assert.IsInstanceOf<VarDeclNode>(ast.Root.Sequence[0], "VarDeclNode not found");
+            Assert.IsInstanceOf<ForStatement>(ast.Root.Sequence[1], "ForStatement not found");
+            Assert.IsInstanceOf<ScopeNode>((ast.Root.Sequence[1] as ForStatement).Body, "ForStatement body was invalid");
+            Assert.IsInstanceOf<UnaryOpNode>(((ast.Root.Sequence[1] as ForStatement).Body as ScopeNode)[0], "ForStatement body (unop) was invalid");
+            Assert.IsInstanceOf<BinOpNode>((ast.Root.Sequence[1] as ForStatement).Condition, "ForStatement condition was invalid");
+            Assert.IsInstanceOf<UnaryOpNode>((ast.Root.Sequence[1] as ForStatement).After, "ForStatement after was invalid");
+            Assert.IsInstanceOf<AssignmentNode>((ast.Root.Sequence[1] as ForStatement).Init, "ForStatement init was invalid");
         }
 
         #endregion

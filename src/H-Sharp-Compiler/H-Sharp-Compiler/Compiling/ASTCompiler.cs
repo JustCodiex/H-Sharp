@@ -186,6 +186,7 @@ namespace HSharp.Compiling {
                 IfStatement ifStatement => this.CompileBranch(ifStatement, context),
                 WhileStatement whileStatement => this.CompileWhileNode(whileStatement, context),
                 DoWhileStatement doWhileStatement => this.CompileDoWhileNode(doWhileStatement, context),
+                ForStatement forStatement => this.CompileForNode(forStatement, context),
                 _ => throw new NotImplementedException(),
             };
             return instructions;
@@ -449,6 +450,17 @@ namespace HSharp.Compiling {
             var condition = this.CompileNode(whileStatement.Condition as ASTNode, context);
             condition.Add(new ByteInstruction(Bytecode.JMPIFT, -(condition.Count + 1 + body.Count)));
             var result = body.Union(condition).ToList();
+            return result;
+        }
+
+        private List<ByteInstruction> CompileForNode(ForStatement forStatement, CompileContext context) {
+            var init = this.CompileNode(forStatement.Init, context);
+            var cond = this.CompileNode(forStatement.Condition as ASTNode, context);
+            var after = this.CompileNode(forStatement.After as ASTNode, context);
+            var body = this.CompileNode(forStatement.Body as ASTNode, context);
+            cond.Add(new ByteInstruction(Bytecode.JMPIFF, after.Count + body.Count + 1));
+            after.Add(new ByteInstruction(Bytecode.JMP, -(body.Count + cond.Count + after.Count + 1)));
+            var result = init.Union(cond).Union(body).Union(after).ToList();
             return result;
         }
 

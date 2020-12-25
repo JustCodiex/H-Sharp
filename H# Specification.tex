@@ -160,15 +160,17 @@ If multiple elements can occur - and it'd be convenient, the element may be suff
 	
 	\newpage	
 	
-	\gtext{ControlStatement} ::= \glit{if} $Expr$ $Scope$
-	\alt \glit{if} $Expr$ $Scope$ \glit{else} $Scope$
-	\alt \glit{if} $Expr$ $Scope$ \glit{else if} $Expr$ $Scope$
-	\alt \glit{if} $Expr$ $Scope$ \glit{else if} $Expr$ $Scope$ \glit{else} $Scope$
-	\alt \glit{while} $Expr$ $Scope$
-	\alt \glit{do} $Scope$ \glit{while} $Expr$\glit{;}
-	\alt \glit{for} \glit{(}$Assignment$\glit{;} $Expr$\glit{;} $Expr$\glit{)} $Scope$
-	\alt \glit{for} \glit{(}$VarDeclaration$\glit{;} $Expr$\glit{;} $Expr$\glit{)} $Scope$
-	\alt \glit{for} \glit{(}$TypeId$ $Id$ \glit{:} $Expr$\glit{)} $Scope$
+	\gtext{ControlStatement} ::= \glit{if} $Expr$ $Expr$
+	\alt \glit{if} $Expr$ $Expr$ \glit{else} $Expr$
+	\alt \glit{if} $Expr$ $Expr$ \glit{else if} $Expr$ $Expr$
+	\alt \glit{if} $Expr$ $Expr$ \glit{else if} $Expr$ $Expr$ \glit{else} $Expr$
+	\alt \glit{while} $Expr$ $Expr$
+	\alt \glit{do} $Expr$ \glit{while} $Expr$\glit{;}
+	\alt \glit{for} \glit{(}$Assignment$\glit{;} $Expr$\glit{;} $Expr$\glit{)} $Expr$
+	\alt \glit{for} \glit{(}$VarDeclaration$\glit{;} $Expr$\glit{;} $Expr$\glit{)} $Expr$
+	\alt \glit{for} \glit{(}$TypeId$ $Id$ \glit{:} $Expr$\glit{)} $Expr$
+	\alt \glit{for} \glit{(var} $Id$ \glit{:} $Expr$\glit{)} $Expr$
+	\alt \glit{for} \glit{(}$Id$ \glit{:} $Expr$\glit{)} $Expr$ % Will rely on type inference
 	\alt \glit{throw} $TypeID$\glit{(}$Argument$\glit{)}
 	\alt \glit{return} $Expr$\glit{;}
 	\alt \glit{break;}

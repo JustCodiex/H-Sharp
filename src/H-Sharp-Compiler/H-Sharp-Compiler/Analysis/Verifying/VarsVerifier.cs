@@ -128,6 +128,15 @@ namespace HSharp.Analysis.Verifying {
                 case ElseStatement elseStatement:
                     this.VarsNode(elseStatement.Body as ASTNode, scope);
                     break;
+                case ForStatement forStatement:
+                    VarScope forScope = new VarScope(scope);
+                    this.VarsNode(forStatement.Init, forScope);
+                    this.VarsNode(forStatement.Condition as ASTNode, forScope);
+                    this.VarsNode(forStatement.After as ASTNode, forScope);
+                    this.VarsNode(forStatement.Body as ASTNode, forScope);
+                    forStatement.VarIndices = this.Exit(scope, forScope);
+                    scope.top = forScope.top;
+                    break;
                 case LoopNode loopStatement:
                     this.VarsNode(loopStatement.Condition as ASTNode, scope);
                     this.VarsNode(loopStatement.Body as ASTNode, scope); // If Scope node it's handled properly

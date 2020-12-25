@@ -3,7 +3,7 @@ using HSharp.IO;
 
 namespace HSharp.Parsing.AbstractSnyaxTree.Expression {
     
-    public class ScopeNode : ASTNode, IGroupedASTNode {
+    public class ScopeNode : ASTNode, IGroupedASTNode, IVariableScope {
 
         private List<ASTNode> m_nodes;
 

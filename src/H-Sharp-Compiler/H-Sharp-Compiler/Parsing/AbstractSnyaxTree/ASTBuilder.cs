@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using HSharp.IO;
 using HSharp.Language;
@@ -682,7 +683,23 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
         }
 
         private void ApplyForStatementGrammar(List<ASTNode> nodes, int from) {
-            throw new NotImplementedException();
+            if (TypeSequence<ASTNode, ASTNode, IExpr, IExpr>.Match(nodes, from)) {
+                ApplySingleNodeGrammar(nodes[from + 2], true); // NOTE: may do unexpected stuff later on <-> Be careful here, may need its own function
+                if (nodes[from+1] is ExpressionNode forNode) {
+                    if (forNode.Count(x => x.Content.CompareTo(";") == 0) == 2) { // For statement of form "for ( <expr>; <expr>; <expr> ) { ..."
+                        this.ApplyGrammar(forNode.Nodes, 0, true);
+                        Contract.Ensures(forNode.Nodes.Count == 3, $"Expected 3 elements in for-condition but found {forNode.Nodes.Count}");
+                        nodes[from] = new ForStatement(nodes[from].Pos, forNode.Nodes[0], forNode.Nodes[1] as IExpr, forNode.Nodes[2] as IExpr, nodes[from + 2] as IExpr);
+                        nodes.RemoveRange(from + 1, 2);
+                    } else {
+                        throw new SyntaxError(-1, forNode.Pos, string.Empty);
+                    }
+                } else {
+                    throw new SyntaxError(-1, nodes[from + 1].Pos, $"Expected '(' but found '{nodes[from + 1].Content}'");
+                }
+            } else {
+                throw new SyntaxError(-1, nodes[from].Pos, "Unexpected 'for' keyword found.");
+            }
         }
 
         private List<ASTNode> ParseTopLevel() {
