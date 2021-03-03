@@ -24,7 +24,7 @@ namespace HSharp {
 
         public CompileResult SetOrigin(ASTNode node) => this.SetOrigin(node.Pos);
 
-        public override string ToString() => Success ? "Success" : $"Fatal Compile Error @ {this.Origin} - \"{this.Message}\"";
+        public override string ToString() => Success ? "Success" : $"Fatal Compile Error {this.Origin.GetAbsolute()} - \"{this.Message}\"";
 
         public static implicit operator bool(CompileResult r) => r.Success;
 

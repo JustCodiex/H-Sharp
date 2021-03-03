@@ -216,8 +216,11 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                         case "internal":
                             nodes[i] = new AccessModifierNode(nodes[i].Content, nodes[i].Pos);
                             break;
+                        case "namespace":
+                            this.ApplyNamespaceGrammar(nodes, i);
+                            break;
                         default:
-                            throw new NotImplementedException();
+                            throw new NotImplementedException(nodes[i].Content);
                     }
                 } else if (TypeSequence<ASTNode, IdentifierNode, IdentifierNode, SeperatorNode>.Match(nodes, i)) { // int x;
 
@@ -343,26 +346,26 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
             int fromNeg = from - 1;
             while (fromNeg >= 0) {
                 if (nodes[fromNeg] is AccessModifierNode accMod) {
-                    if (accessModifier.Modifier != AccessModifier.Default) {
-                        throw new SyntaxError(-1, accMod.Pos, "Unexpected access modifier"); // Semantic error might be more proper?
-                    } else {
+                    if (accessModifier.Modifier == AccessModifier.Default) {
                         accessModifier = accMod;
+                    } else if (accessModifier.Modifier == AccessModifier.External) {
+                        accessModifier = new AccessModifierNode($"{accMod.Content} {accessModifier.Content}", accMod.Pos);
+                    } else {
+                        throw new SyntaxError(-1, accMod.Pos, "Unexpected access modifier"); // Semantic error might be more proper?
                     }
                     this.RemoveNode(nodes, fromNeg);
-                    from--;
-                    continue;
+                    fromNeg--;
                 } else if (nodes[fromNeg] is StorageModifierNode stoMod) {
                     if (!storageModifiers.Add(stoMod)) {
-                        throw new SyntaxError(-1, stoMod.Pos, "Unexpected storage modifier, already exists"); // Semantic error might be more proper?
+                        throw new SyntaxError(-1, stoMod.Pos, "Unexpected duplicated storage modifier"); // Semantic error might be more proper?
                     }
                     this.RemoveNode(nodes, fromNeg);
-                    from--;
-                    continue;
+                    fromNeg--;
                 } else {
                     break;
                 }
             }
-
+            from = fromNeg + 1;
         }
 
         private bool IsInheritanceSequence(List<ASTNode> nodes, int from, out List<ASTNode> inheritance) {
@@ -463,6 +466,40 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
         }
 
+        private bool ClassExternalPattern(List<ASTNode> nodes, ref int from) {
+            if (TypeSequence<ASTNode, IdentifierNode, ExpressionNode, ASTNode, IdentifierNode, SeperatorNode>.Match(nodes, from)) {
+                if (nodes[from + 2].Content.CompareTo(":") == 0) {
+                    
+                    // Apply modifier grammar
+                    this.ApplyModifierGrammar(nodes, ref from, out AccessModifierNode accessModifier, out HashSet<StorageModifierNode> storageModifiers);
+                    
+                    // Create function declaration
+                    FuncDeclNode funcDecl = new FuncDeclNode(nodes[from].Content, nodes[from].Pos) {
+                        Return = nodes[from + 3],
+                        Params = new ParamsNode(nodes[from + 1] as ExpressionNode) // Note: This constructor will apply the grammar rule on its own
+                    };
+
+                    // Apply function modifiers
+                    this.ApplyModifiers(funcDecl, accessModifier, storageModifiers);
+
+                    // Make sure parameters are valid
+                    if (!funcDecl.Params.IsValid) {
+                        throw new Exception();
+                    }
+
+                    // Overwrite node and remove used nodes
+                    nodes[from] = funcDecl;
+                    nodes.RemoveRange(from + 1, 4);
+
+                    return true;
+                } else {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
         private void ApplyClassGrammar(List<ASTNode> nodes, ref int from) {
 
             string identifierName = string.Empty;
@@ -514,7 +551,7 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
                 ScopeNode classBody = nodes[from + 2] as ScopeNode;
 
-                this.ApplyGrammar(classBody.Nodes, 0, false, ClassCtorPattern);
+                this.ApplyGrammar(classBody.Nodes, 0, false, ClassCtorPattern, this.ClassExternalPattern);
 
                 for (int i = 0; i < classBody.Size; i++) {
 
@@ -699,6 +736,32 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
                 }
             } else {
                 throw new SyntaxError(-1, nodes[from].Pos, "Unexpected 'for' keyword found.");
+            }
+        }
+
+        private void ApplyNamespaceGrammar(List<ASTNode> nodes, int from) {
+            if (TypeSequence<ASTNode, ASTNode, IExpr, ScopeNode>.Match(nodes, from)) {
+
+                // Figure out name
+                NameIdentifierNode nameIdentifier;
+                if (nodes[from+1] is MemberAccessNode memAcc) {
+                    nameIdentifier = new NameIdentifierNode(memAcc);
+                } else if (nodes[from+1] is IdentifierNode identifierNode) {
+                    nameIdentifier = new NameIdentifierNode(identifierNode);
+                } else {
+                    throw new NotImplementedException();
+                }
+                
+                // Handle boddy
+                ScopeNode body = nodes[from + 2] as ScopeNode;
+                this.ApplyGrammar(body.Nodes);
+
+                // Create namespace node
+                nodes[from] = new NamespaceDirectiveNode(nameIdentifier, body, nodes[from].Pos);
+                nodes.RemoveRange(1, 2);
+
+            } else {
+                throw new SyntaxError(-1, nodes[from].Pos, string.Empty);
             }
         }
 

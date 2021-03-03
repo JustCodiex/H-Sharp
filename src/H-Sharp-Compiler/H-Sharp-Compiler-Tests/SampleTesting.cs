@@ -2,6 +2,7 @@
 using HSharp.Analysis.Typechecking;
 using HSharp.Analysis.Verifying;
 using HSharp.Compiling;
+using HSharp.IO;
 using HSharp.Parsing;
 using HSharp.Parsing.AbstractSnyaxTree;
 using NUnit.Framework;
@@ -327,6 +328,24 @@ namespace H_Sharp_Compiler_Tests {
                 "y + x;"
             };
             var result = this.compiler.CompileProject(FromText(sample, "VariableDecl2", "variabledecl2.bin"));
+            Assert.That(result.Success);
+        }
+
+        #endregion
+
+        #region Namespace Tests
+
+        [Test]
+        [Category("Namespace Testing")]
+        public void NamespaceParse1() {
+            string[] sample = {
+                "namespace app.space {",
+                "   public class KlassA(int a, int b);",
+                "   public class KlassB(int a, int b);",
+                "   public class KlassC(int a, int b);",
+                "}"
+            };
+            var result = this.compiler.CompileProject(FromText(sample, "Namespace1", "namespace1.hlib", SourceProjectType.Library));
             Assert.That(result.Success);
         }
 

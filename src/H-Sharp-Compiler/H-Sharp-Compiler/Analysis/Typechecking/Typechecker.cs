@@ -12,12 +12,14 @@ using HSharp.Parsing.AbstractSnyaxTree.Statement;
 using HSharp.Parsing.AbstractSnyaxTree.Type;
 using HSharp.Util.Functional;
 using ValueType = HSharp.Analysis.TypeData.ValueType;
+using HSharp.Parsing.AbstractSnyaxTree.Directive;
 
 namespace HSharp.Analysis.Typechecking {
     
     public class Typechecker {
     
         private ValueType Bool { get; set; }
+
         private ValueType Int32 { get; set; }
 
         public Typechecker() {
@@ -46,6 +48,7 @@ namespace HSharp.Analysis.Typechecking {
             VarDeclNode varDecl => this.TypecheckVardeclOperation(varDecl, tenv, domain),
             FuncDeclNode funcDecl => this.TypecheckFuncDeclOperation(funcDecl, tenv, domain),
             ClassDeclNode classDecl => this.TypecheckClassDeclOperation(classDecl, tenv, domain),
+            NamespaceDirectiveNode namespaceDirective => this.TypecheckNamespace(namespaceDirective, tenv, domain),
             BinOpNode binop => this.TypecheckBinaryOperation(binop, tenv, domain),
             UnaryOpNode unop => this.TypecheckUnaryOperation(unop, tenv, domain),
             MemberAccessNode memberAccess => this.TypecheckMemberAccessOperation(memberAccess, tenv, domain),
@@ -67,6 +70,18 @@ namespace HSharp.Analysis.Typechecking {
             ILiteral lit => this.TypecheckConstOperation(lit, domain),
             _ => (new CompileResult(false, $"Unsupported type-checkable element '{node.NodeType}'").SetOrigin(node), null),
         };
+
+        private (CompileResult, IValType) TypecheckNamespace(NamespaceDirectiveNode namespaceDirective, TypeEnvironment tenv, Domain domain) {
+
+            var subDomain = domain.First<NamespaceDomain>(namespaceDirective.Name.FullName);
+            var bodyResult = this.TypecheckNode(namespaceDirective.Body, tenv, subDomain);
+            if (!bodyResult.Item1) {
+                return bodyResult;
+            }
+
+            return (new CompileResult(true), VoidType.Void);
+
+        }
 
         private (CompileResult, IValType) TypecheckClassDeclOperation(ClassDeclNode classDecl, TypeEnvironment tenv, Domain domain) {
 
@@ -94,7 +109,7 @@ namespace HSharp.Analysis.Typechecking {
                 }
             }
 
-            return (new CompileResult(true), null);
+            return (new CompileResult(true), VoidType.Void);
 
         }
 

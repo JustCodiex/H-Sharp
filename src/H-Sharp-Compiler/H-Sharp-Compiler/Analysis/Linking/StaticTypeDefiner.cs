@@ -3,6 +3,7 @@ using HSharp.Analysis.TypeData;
 using HSharp.IO;
 using HSharp.Parsing.AbstractSnyaxTree;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
+using HSharp.Parsing.AbstractSnyaxTree.Directive;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
 using HSharp.Parsing.AbstractSnyaxTree.Type;
 
@@ -28,10 +29,22 @@ namespace HSharp.Analysis.Linking {
         private static CompileResult DefineType(ASTNode node, Domain domain) {
             return node switch
             {
+                NamespaceDirectiveNode namespaceDirective => DefineNamespaceElements(namespaceDirective, domain),
                 ClassDeclNode classDecl => DefineClass(classDecl, domain),
                 FuncDeclNode funcDecl => DefineFunc(funcDecl, domain),
                 _ => new CompileResult(true)
             };
+        }
+
+        private static CompileResult DefineNamespaceElements(NamespaceDirectiveNode namespaceDirective, Domain domain) {
+            NamespaceDomain subDomain = domain.First<NamespaceDomain>(namespaceDirective.Name.FullName);
+            foreach (var node in namespaceDirective.Body.Nodes) {
+                var result = DefineType(node, subDomain);
+                if (!result) {
+                    return result;
+                }
+            }
+            return new CompileResult(true);
         }
 
         private static CompileResult DefineClass(ClassDeclNode classDeclNode, Domain domain) {
@@ -74,7 +87,7 @@ namespace HSharp.Analysis.Linking {
                 return new CompileResult(true);
 
             } else {
-                return new CompileResult(false, "Uhm...");
+                return new CompileResult(false, $"Unknown class type '{classDeclNode.LocalClassName}' inside domain '{domain}'").SetOrigin(classDeclNode);
             }
         }
 
@@ -113,7 +126,7 @@ namespace HSharp.Analysis.Linking {
             List<HSharpType> parameters = new List<HSharpType>();
 
             // add the "this" parameter
-            SourcePosition pos = funcDeclNode.Pos; // Stor position for convenience
+            SourcePosition pos = funcDeclNode.Pos; // Store position for convenience
             if (methodOwner is not null) {
                 funcDeclNode.Params.InsertParam(0, new ParamsNode.ParameterNode(new TypeIdentifierNode(methodOwner.Name, pos), new IdentifierNode("this", pos), pos));
             }

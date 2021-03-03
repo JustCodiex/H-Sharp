@@ -1,8 +1,8 @@
-using System;
-using System.Collections.Generic;
+using HSharp.Language;
 using HSharp.Parsing;
 using HSharp.Parsing.AbstractSnyaxTree;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
+using HSharp.Parsing.AbstractSnyaxTree.Directive;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
 using HSharp.Parsing.AbstractSnyaxTree.Statement;
 using NUnit.Framework;
@@ -146,6 +146,51 @@ namespace H_Sharp_Compiler_Tests {
             Assert.IsInstanceOf<UnaryOpNode>((ast.Root.Sequence[1] as ForStatement).After, "ForStatement after was invalid");
             Assert.IsInstanceOf<AssignmentNode>((ast.Root.Sequence[1] as ForStatement).Init, "ForStatement init was invalid");
         }
+
+        #endregion
+
+        #region Namespace Testing
+
+        [Test]
+        [Category("Namespace Testing")]
+        public void NamespaceParse1() {
+            string[] code = {
+                "namespace app.space {",
+                "   public class KlassA(int a, int b);",
+                "   public class KlassB(int a, int b);",
+                "   public class KlassC(int a, int b);",
+                "}"
+            };
+            var ast = this.BuildAST(ToSingleText(code));
+            Assert.That(ast is not null, () => "Expected a root AST node");
+            Assert.IsInstanceOf<NamespaceDirectiveNode>(ast.Root.Sequence[0], "NamespaceDirectiveNode not found");
+            Assert.AreEqual(3, (ast.Root.Sequence[0] as NamespaceDirectiveNode).Body.Nodes.Count);
+            Assert.IsInstanceOf<ClassDeclNode>((ast.Root.Sequence[0] as NamespaceDirectiveNode).Body[0], "ClassDeclNode not found (@1)");
+            Assert.IsInstanceOf<ClassDeclNode>((ast.Root.Sequence[0] as NamespaceDirectiveNode).Body[1], "ClassDeclNode not found (@2)");
+            Assert.IsInstanceOf<ClassDeclNode>((ast.Root.Sequence[0] as NamespaceDirectiveNode).Body[2], "ClassDeclNode not found (@3)");
+        }
+
+        #endregion
+
+        #region Modifier Testing
+
+        #region Access Modifier Testing
+        [Test]
+        [Category("Access Modifier Testing")]
+        public void ExternalAccessTesting() {
+            string[] code = {
+                "public class Example {",
+                "   public external getX(): int;",
+                "}"
+            };
+            var ast = this.BuildAST(ToSingleText(code));
+            Assert.That(ast is not null, () => "Expected a root AST node");
+            Assert.IsInstanceOf<ClassDeclNode>(ast.Root.Sequence[0], "ClassDeclNode not found");
+            Assert.IsInstanceOf<FuncDeclNode>((ast.Root.Sequence[0] as ClassDeclNode).Methods[0], "FuncDeclNode not found in ClassDeclNode");
+            Assert.AreEqual(AccessModifier.Public | AccessModifier.External, (ast.Root.Sequence[0] as ClassDeclNode).Methods[0].GetAccessModifier(), "FuncDeclNode does not have a public external access modifier");
+        }
+
+        #endregion
 
         #endregion
 

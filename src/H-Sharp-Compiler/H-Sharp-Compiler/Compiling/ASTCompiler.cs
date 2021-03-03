@@ -13,6 +13,7 @@ using HSharp.Compiling.Hint;
 using HSharp.Compiling.Branching;
 using HSharp.Analysis.TypeData;
 using ValueType = HSharp.Analysis.TypeData.ValueType;
+using HSharp.Parsing.AbstractSnyaxTree.Directive;
 
 namespace HSharp.Compiling {
 
@@ -26,43 +27,11 @@ namespace HSharp.Compiling {
             this.m_asts = asts;
         }
 
-        public ProgramOutput GetProgram() {
+        public AST[] GetTrees() => this.m_asts;
 
-            ProgramOutput program = new ProgramOutput();
-            Dictionary<string, long> offsets = new Dictionary<string, long>();
-            List<ByteInstruction> allInstructions = new List<ByteInstruction>();
-            long offset = 0;
+        public CompiledFunction[] GetCompiledBytecode() => this.m_compiledFuncs;
 
-            for (int i = 0; i < this.m_compiledFuncs.Length; i++) {
-
-                offsets.Add(this.m_compiledFuncs[i].Name, offset);
-
-                for (int j = 0; j < this.m_compiledFuncs[i].Instructions.Count; j++) {
-                    ByteInstruction instruction = this.m_compiledFuncs[i].Instructions[j];
-                    allInstructions.Add(instruction);
-                    offset += instruction.GetSize();
-                }
-
-                long remainder = offset % 4;
-                if (remainder > 0) {
-                    for (int j = 0; j < remainder; j++) {
-                        allInstructions.Add(new ByteInstruction(Bytecode.NOP));
-                    }
-                    offset += remainder;
-                }
-
-            }
-
-            // Set instructions, offsets, bytes and strings
-            program.SetInstructions(allInstructions.ToArray());
-            program.SetOffsets(offsets, offset);
-            program.SetBytes(this.m_context.ConstBytes);
-            program.SetStrings(this.m_context.Strings);
-
-            // Set program
-            return program;
-
-        }
+        public CompileContext GetCompileContext() => this.m_context;
 
         public CompileResult Compile() {
 
@@ -82,33 +51,55 @@ namespace HSharp.Compiling {
             List<CompiledFunction> compiledInstructions = new List<CompiledFunction>();
 
             CompileUnitNode unit = ast.Root;
-            CompiledFunction topLevelFunc = new CompiledFunction($"_<{Path.GetFileNameWithoutExtension(ast.Source.Value.Name)}>");
+            CompiledFunction topLevelFunc = new CompiledFunction($"_<{Path.GetFileNameWithoutExtension(ast.Source.Name)}>");
 
             CompileContext context = new CompileContext();
             foreach (ASTNode node in unit) {
-
-                if (node is IDecl decl && node is not VarDeclNode) {
-
-                    compiledInstructions.AddRange(this.CompileDeclaration(decl, context));
-                    if (!context.Result) {
-                        return context.Result;
-                    }
-
-                } else {
-
-                    topLevelFunc.Instructions.AddRange(this.CompileNode(node, context));
-                    if (!context.Result) {
-                        return context.Result;
-                    }
-
+                var nodeResult = this.CompileToplevel(node, context, topLevelFunc, compiledInstructions);
+                if (!nodeResult) {
+                    return nodeResult;
                 }
-
             }
 
             compiledInstructions.Add(topLevelFunc);
 
             this.m_compiledFuncs = compiledInstructions.ToArray();
             this.m_context = context;
+
+            return new CompileResult(true);
+
+        }
+
+        private CompileResult CompileToplevel(ASTNode node, CompileContext context, CompiledFunction topLevelFunc, List<CompiledFunction> compiledInstructions) {
+
+            if (node is IDecl decl && node is not VarDeclNode) {
+
+                compiledInstructions.AddRange(this.CompileDeclaration(decl, context));
+                if (!context.Result) {
+                    return context.Result;
+                }
+
+            } else if (node is NamespaceDirectiveNode namespaceDirective) {
+
+                foreach (var subNode in namespaceDirective.Body.Nodes) {
+                    var nodeResult = this.CompileToplevel(subNode, context, null, compiledInstructions);
+                    if (!nodeResult) {
+                        return nodeResult;
+                    }
+                }
+
+            } else {
+
+                if (topLevelFunc is null) {
+                    return new CompileResult(false, $"Failed to compile a top-level statement that was outside the top-level.").SetOrigin(node);
+                }
+
+                topLevelFunc.Instructions.AddRange(this.CompileNode(node, context));
+                if (!context.Result) {
+                    return context.Result;
+                }
+
+            }
 
             return new CompileResult(true);
 
@@ -169,7 +160,7 @@ namespace HSharp.Compiling {
                 ThisNode => Instruction(new ByteInstruction(Bytecode.PUSH, 0)),
                 BaseNode => Instruction(new ByteInstruction(Bytecode.PUSH, 0)),
                 ILiteral litNode => this.CompileConstant(litNode as ASTNode),
-                IdentifierNode idNode => Instruction(new ByteInstruction(idNode.IsFuncIdentifier ? Bytecode.PUSHCLOSURE : Bytecode.PUSH, idNode.Index)),
+                IdentifierNode idNode => this.CompileIdentifier(idNode),
                 AssignmentNode assignmentNode => this.CompileAssignmentOperation(assignmentNode, context),
                 BinOpNode binOpNode => this.CompileBinaryOperation(binOpNode, context),
                 UnaryOpNode unaryOpNode => this.CompileUnaryOperation(unaryOpNode, context),
@@ -190,6 +181,14 @@ namespace HSharp.Compiling {
                 _ => throw new NotImplementedException(),
             };
             return instructions;
+        }
+
+        private List<ByteInstruction> CompileIdentifier(IdentifierNode node) {
+            if (node.IsFuncIdentifier) {
+                return Instruction(new ByteInstruction(Bytecode.PUSH, node.Index.ToString()));
+            } else {
+                return Instruction(new ByteInstruction(Bytecode.PUSH, node.Index));
+            }
         }
 
         private List<ByteInstruction> CompileAssignmentOperation(AssignmentNode node, CompileContext context) {

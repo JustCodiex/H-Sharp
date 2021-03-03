@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace HSharp.Analysis {
     
@@ -14,6 +15,15 @@ namespace HSharp.Analysis {
 
         }
 
+        public NamespaceDomain GetOrCreateSubNamespace(string name) {
+            if (this.m_subDomains.Any(x => x.Name.CompareTo(name) == 0 && x is NamespaceDomain)) {
+                return this.m_subDomains.First(x => x.Name.CompareTo(name) == 0) as NamespaceDomain;
+            } else {
+                NamespaceDomain domain = new NamespaceDomain(name, this);
+                this.AddSubdomain(domain);
+                return domain;
+            }
+        }
 
     }
 

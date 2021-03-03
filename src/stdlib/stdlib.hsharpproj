@@ -1,0 +1,23 @@
+{
+  "Name": "Standard Library",
+  "Output": "..\\stdlib_bin\\stdlib.hlib",
+  "ProjectType": 2,
+  "Sources": [
+    {
+      "Name": "Object",
+      "Value": "Object.hsharp",
+      "IsVirtual": false
+    },
+    {
+      "Name": "Type",
+      "Value": "Type.hsharp",
+      "IsVirtual": false
+    },
+    {
+      "Name": "String",
+      "Value": "String.hsharp",
+      "IsVirtual": false
+    }
+  ],
+  "References": []
+}

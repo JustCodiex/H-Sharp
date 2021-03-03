@@ -13,6 +13,8 @@ namespace HSharp.Parsing.AbstractSnyaxTree.Declaration {
 
         public ScopeNode Body { get; set; }
 
+        public bool HasBody => this.Body is not null;
+
         public ParamsNode Params { get; set; }
 
         public ASTNode Return { get; set; }

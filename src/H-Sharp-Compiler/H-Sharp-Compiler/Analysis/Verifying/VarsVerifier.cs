@@ -3,6 +3,7 @@ using System.Linq;
 using HSharp.Metadata;
 using HSharp.Parsing.AbstractSnyaxTree;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
+using HSharp.Parsing.AbstractSnyaxTree.Directive;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
 using HSharp.Parsing.AbstractSnyaxTree.Initializer;
 using HSharp.Parsing.AbstractSnyaxTree.Literal;
@@ -141,10 +142,14 @@ namespace HSharp.Analysis.Verifying {
                     this.VarsNode(loopStatement.Condition as ASTNode, scope);
                     this.VarsNode(loopStatement.Body as ASTNode, scope); // If Scope node it's handled properly
                     break;
+                case NamespaceDirectiveNode namespaceDirective:
+                    this.VarsNode(namespaceDirective.Body, scope);
+                    break;
                 case ThisNode:
                 case BaseNode:
                 case IntLitNode:
                 case BoolLitNode:
+                case IDirective: // Ignore directives
                     break;
                 default:
                     Log.WriteLine($"Vars not implemented for type: {node.GetType().Name}");

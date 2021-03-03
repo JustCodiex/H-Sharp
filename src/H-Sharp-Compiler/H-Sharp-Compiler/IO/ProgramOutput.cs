@@ -1,8 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
-using HSharp.Compiling;
 using System.Collections.ObjectModel;
+
+using HSharp.Compiling;
+using HSharp.Compiling.Linking;
 
 namespace HSharp.IO {
 
@@ -13,9 +15,12 @@ namespace HSharp.IO {
         private long m_instructionOffset;
         private byte[] m_constBytes;
         private ReadOnlyDictionary<string, ulong> m_strings;
+        private SourceProjectType m_projType;
+        private List<LinkingType> m_declaredTypes;
 
         public ProgramOutput() {
             this.m_strings = new ReadOnlyDictionary<string, ulong>(new Dictionary<string, ulong>());
+            this.m_declaredTypes = new List<LinkingType>();
         }
 
         public void SetOffsets(Dictionary<string, long> offsets, long instructionOffset) {
@@ -23,18 +28,29 @@ namespace HSharp.IO {
             this.m_instructionOffset = instructionOffset;
         }
 
+        public void SetProgramType(SourceProjectType type) => this.m_projType = type;
+
         public void SetInstructions(ByteInstruction[] instructions) => this.m_instructions = instructions;
 
         public void SetBytes(byte[] bytes) => this.m_constBytes = bytes;
 
         public void SetStrings(ReadOnlyDictionary<string, ulong> strings) => this.m_strings = strings;
 
+        public void SetDeclaredTypes(List<LinkingType> types) => this.m_declaredTypes = types;
+
         public void Save(string outputPath) {
+
+            // Delete any existing file
+            if (File.Exists(outputPath)) {
+                File.Delete(outputPath);
+            }
 
             using BinaryWriter writer = new BinaryWriter(File.OpenWrite(outputPath));
 
             // header stuff
+            writer.Write((byte)this.m_projType);
             writer.Write(this.m_instructionOffset);
+            writer.Write(this.m_declaredTypes.Count);
 
             for (int i = 0; i < this.m_instructions.Length; i++) {
                 writer.Write((byte)this.m_instructions[i].Op);
@@ -75,6 +91,10 @@ namespace HSharp.IO {
             writer.Write(this.m_constBytes.LongLength);
             writer.Write(this.m_constBytes);
 
+            foreach (var export in this.m_declaredTypes) {
+                writer.Write(export.ToBytes());
+            }
+
         }
 
         public void SaveAsText(string outputPath) {
@@ -107,6 +127,20 @@ namespace HSharp.IO {
                 if (i > 1 && (i+1) % 16 == 0) {
                     writer.Write("\n");
                 }
+            }
+
+            if (this.m_declaredTypes.Count > 0) {
+
+                writer.WriteLine();
+                writer.WriteLine($"Exported Types [#{this.m_declaredTypes.Count}]:");
+
+                foreach (var t in this.m_declaredTypes) {
+
+                    writer.WriteLine($"\t[{t.FullName}]:");
+                    writer.WriteLine($"\t\tSizeInMemory: {t.SizeInMemory}");
+
+                }
+
             }
 
         }

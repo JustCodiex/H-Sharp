@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using HSharp.Analysis.TypeData;
 
@@ -30,7 +29,16 @@ namespace HSharp.Analysis {
             int dotter = typeName.IndexOf('.');
             if (dotter > 0) {
 
-                throw new NotImplementedException();
+                string top = typeName.Substring(0, dotter);
+                string next = typeName[(dotter + 1)..];
+
+                int topIndex = this.m_subDomains.FindIndex(x => x.Name.CompareTo(top) == 0);
+                if (topIndex >= 0) {
+                    var result = this.m_subDomains[topIndex].First<T>(next);
+                    return result;
+                } else {
+                    return default;
+                }
 
             } else {
                 if (this.m_subDomains.FirstOrDefault(x => x.Name.CompareTo(typeName) == 0) is T self) {

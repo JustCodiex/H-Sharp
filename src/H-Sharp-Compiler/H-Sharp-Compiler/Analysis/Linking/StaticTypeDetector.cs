@@ -1,6 +1,7 @@
 ﻿using HSharp.Analysis.TypeData;
 using HSharp.Parsing.AbstractSnyaxTree;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
+using HSharp.Parsing.AbstractSnyaxTree.Directive;
 
 namespace HSharp.Analysis.Linking {
 
@@ -27,6 +28,7 @@ namespace HSharp.Analysis.Linking {
             return node switch
             {
                 ClassDeclNode classDeclNode => DetectClassDecl(classDeclNode, currentDomain),
+                NamespaceDirectiveNode namespaceDirective => DetectNamespaceDecl(namespaceDirective, currentDomain),
                 _ => new CompileResult(true)
             };
 
@@ -43,6 +45,32 @@ namespace HSharp.Analysis.Linking {
 
             foreach (ClassDeclNode subClass in node.Classes) {
                 var result = DetectClassDecl(subClass, classType);
+                if (!result) {
+                    return result;
+                }
+            }
+
+            return new CompileResult(true);
+
+        }
+
+        private static CompileResult DetectNamespaceDecl(NamespaceDirectiveNode namespaceDirective, Domain domain) {
+
+            if (domain.HasDomain(namespaceDirective.Name.FullName)) {
+                return new CompileResult(true);
+            }
+
+            NamespaceDomain currDomain = domain as NamespaceDomain;
+            string[] subDomains = namespaceDirective.Name.Elements;
+            int index = 0;
+
+            while (index < subDomains.Length) {
+                currDomain = currDomain.GetOrCreateSubNamespace(subDomains[index]);
+                index++;
+            }
+
+            foreach(ASTNode node in namespaceDirective.Body.Nodes) {
+                var result = DetectInNode(node, currDomain);
                 if (!result) {
                     return result;
                 }

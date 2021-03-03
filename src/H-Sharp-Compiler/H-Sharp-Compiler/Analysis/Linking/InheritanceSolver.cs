@@ -3,6 +3,7 @@ using HSharp.Analysis.TypeData;
 using HSharp.Generator;
 using HSharp.Parsing.AbstractSnyaxTree;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
+using HSharp.Parsing.AbstractSnyaxTree.Directive;
 
 namespace HSharp.Analysis.Linking {
     
@@ -24,13 +25,23 @@ namespace HSharp.Analysis.Linking {
         }
 
         private static CompileResult SolveInNode(ASTNode node, Domain currentDomain) {
-
             return node switch
             {
+                NamespaceDirectiveNode namespaceDirective => SolveNamespaceElements(namespaceDirective, currentDomain),
                 ClassDeclNode classDeclNode => SolveClassDecl(classDeclNode, currentDomain),
                 _ => new CompileResult(true)
             };
+        }
 
+        private static CompileResult SolveNamespaceElements(NamespaceDirectiveNode namespaceDirective, Domain domain) {
+            NamespaceDomain subDomain = domain.First<NamespaceDomain>(namespaceDirective.Name.FullName);
+            foreach (var node in namespaceDirective.Body.Nodes) {
+                var result = SolveInNode(node, subDomain);
+                if (!result) {
+                    return result;
+                }
+            }
+            return new CompileResult(true);
         }
 
         public static CompileResult SolveClassDecl(ClassDeclNode node, Domain domain) {

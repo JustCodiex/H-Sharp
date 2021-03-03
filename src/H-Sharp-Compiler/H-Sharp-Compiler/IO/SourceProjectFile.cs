@@ -1,20 +1,11 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 
 namespace HSharp.IO {
     
-    public readonly struct SourceProjectFile {
-    
-        public string Name { get; }
-
-        public string Value { get; }
-
-        public bool IsVirtual { get; }
-
-        private SourceProjectFile(string name, string val, bool isVirt) {
-            this.Name = name;
-            this.Value = val;
-            this.IsVirtual = isVirt;
-        }
+    [Serializable]
+    public record SourceProjectFile(string Name, string Value, bool IsVirtual) {
+        public SourceProjectFile() : this(string.Empty, string.Empty, true) { }
 
         public static SourceProjectFile FromSource(string path) => new SourceProjectFile(Path.GetFileNameWithoutExtension(path), path, false);
 

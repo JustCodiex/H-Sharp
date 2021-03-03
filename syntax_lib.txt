@@ -1,0 +1,44 @@
+// stdlib_obj.hsharp
+namespace stdlib {
+
+	public class Object {
+		public ToString(): string {
+			this.GetType().ToString();
+		}
+		public external GetType(): Type;
+	}
+
+	public class Type {
+		public string Name { get; }
+	}
+
+}
+
+// stdlib_string.hsharp
+namespace stdlib {
+	public class String {
+		// ...
+		public static external Format(String str, params String[] parameters): String;
+	}
+	using string as String; // this will be implicit and not actually part of the library
+}
+
+// stdlib_console.hsharp
+namespace stdlib {
+	public object Console {
+		public external WriteLine(string consoleMessage): void;
+		public external ReadLine(): string;
+	}
+}
+
+// test.hsharp
+using stdlib;
+
+public class Program {
+	public Main(string[] args): int {
+		Console.WriteLine($"String has type: {typeof(string).Name}");
+		var input = Console.ReadLine();
+		Console.WriteLine($"Your input, '{input}' will, therefore, be of type {input.GetType().Name}");
+		0;
+	}
+}
