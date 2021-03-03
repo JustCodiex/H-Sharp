@@ -1,3 +1,4 @@
+using HSharp.IO;
 using HSharp.Language;
 using HSharp.Parsing;
 using HSharp.Parsing.AbstractSnyaxTree;
@@ -177,7 +178,7 @@ namespace H_Sharp_Compiler_Tests {
         #region Access Modifier Testing
         [Test]
         [Category("Access Modifier Testing")]
-        public void ExternalAccessTesting() {
+        public void ExternalAccessTesting1() {
             string[] code = {
                 "public class Example {",
                 "   public external getX(): int;",
@@ -191,6 +192,28 @@ namespace H_Sharp_Compiler_Tests {
         }
 
         #endregion
+
+        #endregion
+
+        #region Syntax Error Detection Testing
+
+        [Test]
+        [Category("Syntax Error Detection")]
+        public void SyntaxError1() {
+            string[] code = {
+                "namespace library {",
+                "   class LibKlass {",
+                "       five(): int {",
+                "           return 5",
+                "       }",
+                "   }",
+                "}"
+            };
+            var err = Assert.Throws<SyntaxError>(() => this.BuildAST(ToSingleText(code)));
+            Assert.That(err.SyntaxViolationCode, Is.EqualTo(0));
+            Assert.That(err.Origin, Is.EqualTo(new SourcePosition(4, 12, "unknown.hsharp")));
+            Assert.That(err.Message, Is.EqualTo("Expected ';' but found EOS."));
+        }
 
         #endregion
 

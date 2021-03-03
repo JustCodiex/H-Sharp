@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 using HSharp;
 using HSharp.Compiling;
 using HSharp.IO;
 using HSharp.Parsing.AbstractSnyaxTree;
+
 using NUnit.Framework;
 
 namespace H_Sharp_Compiler_Tests {

@@ -641,9 +641,14 @@ namespace HSharp.Parsing.AbstractSnyaxTree {
 
             // Loop until we find a seperator ';'
             int i = from + 1;
-            while(!(nodes[i] is SeperatorNode && nodes[i].Is(";"))) {
+            while(i < nodes.Count && !(nodes[i] is SeperatorNode && nodes[i].Is(";"))) {
                 sandwichedElements.Add(nodes[i]);
                 i++;
+            }
+
+            // If we we hit last element and found no ';' we can throw a syntax error
+            if (i == nodes.Count) {
+                throw new SyntaxError(0, nodes[from].Pos, "Expected ';' but found EOS.");
             }
 
             // Add seperator (Needed so we don't get syntax error)
