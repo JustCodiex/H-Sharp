@@ -1,8 +1,25 @@
-Instruction offset: 0x00000000
+Instruction offset: 0x0000000C
 
 Instructions:
+	[0000]	ENTER, 0
+	[0001]	EXIT, 0
+	[0002]	RET
+	[0003]	NOP
+	[0004]	NOP
+	[0005]	NOP
+	[0006]	NOP
+	[0007]	NOP
 
 Functions:
-	[000] _<String>: 0x00000000
+	[000] String: 0x00000000
+	[001] _<String>: 0x0000000A
 
 Const Bytes [#0]:
+
+Exported Types [#3]:
+	[stdlib.Object]:
+		SizeInMemory: 0
+	[stdlib.Type]:
+		SizeInMemory: 0
+	[stdlib.String]:
+		SizeInMemory: 0

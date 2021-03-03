@@ -56,10 +56,6 @@ namespace HSharp.Analysis.Linking {
 
         private static CompileResult DetectNamespaceDecl(NamespaceDirectiveNode namespaceDirective, Domain domain) {
 
-            if (domain.HasDomain(namespaceDirective.Name.FullName)) {
-                return new CompileResult(true);
-            }
-
             NamespaceDomain currDomain = domain as NamespaceDomain;
             string[] subDomains = namespaceDirective.Name.Elements;
             int index = 0;
