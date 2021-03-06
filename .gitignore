@@ -23,7 +23,8 @@ x86/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
 bld/
-[Bb]in/
+[Bb]in/net5.0/ref/
+[Bb]in/net5.0/regression/
 [Oo]bj/
 [Ll]og/
 
@@ -338,3 +339,7 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
+
+# Other stuff
+*.deps.json
+*.runtimeconfig.*
