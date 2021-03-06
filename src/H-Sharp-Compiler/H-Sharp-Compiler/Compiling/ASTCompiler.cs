@@ -2,18 +2,20 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
-using HSharp.IO;
+
 using HSharp.Parsing.AbstractSnyaxTree;
 using HSharp.Parsing.AbstractSnyaxTree.Declaration;
 using HSharp.Parsing.AbstractSnyaxTree.Expression;
 using HSharp.Parsing.AbstractSnyaxTree.Literal;
 using HSharp.Parsing.AbstractSnyaxTree.Statement;
 using HSharp.Parsing.AbstractSnyaxTree.Initializer;
+using HSharp.Parsing.AbstractSnyaxTree.Directive;
+
 using HSharp.Compiling.Hint;
 using HSharp.Compiling.Branching;
 using HSharp.Analysis.TypeData;
+
 using ValueType = HSharp.Analysis.TypeData.ValueType;
-using HSharp.Parsing.AbstractSnyaxTree.Directive;
 
 namespace HSharp.Compiling {
 
@@ -23,8 +25,11 @@ namespace HSharp.Compiling {
         private CompiledFunction[] m_compiledFuncs;
         private CompileContext m_context;
 
+        private ulong m_funcPtr;
+
         public ASTCompiler(AST[] asts) {
             this.m_asts = asts;
+            this.m_funcPtr = 0;
         }
 
         public AST[] GetTrees() => this.m_asts;
@@ -108,21 +113,29 @@ namespace HSharp.Compiling {
         private List<CompiledFunction> CompileDeclaration(IDecl decl, CompileContext context) {
 
             switch (decl) {
-                case FuncDeclNode funcDecl:
+                case FuncDeclNode funcDecl when funcDecl.HasBody:
                     return new List<CompiledFunction>() { this.CompileFunction(funcDecl, context) };
                 case ClassDeclNode classDecl:
+                    
                     List<CompiledFunction> funcs = new List<CompiledFunction>();
-                    funcs.AddRange(classDecl.Methods.Select(x => this.CompileFunction(x, context)));
+                    
+                    funcs.AddRange(classDecl.Methods
+                        .Where(x => x.HasBody)
+                        .Select(x => this.CompileFunction(x, context)));
+                    
                     if (!context.Result) {
                         return new List<CompiledFunction>();
                     }
+
                     bool allPass = classDecl.Classes.Select(x => this.CompileDeclaration(x, context)).All(k => {
                         funcs.AddRange(k);
                         return context.Result;
                     });
+                    
                     if (!allPass) {
                         return new List<CompiledFunction>();
                     }
+                    
                     return funcs;
                 default:
                     return new List<CompiledFunction>();
@@ -147,6 +160,10 @@ namespace HSharp.Compiling {
             }
 
             instructions.Add(new ByteInstruction(Bytecode.RET));
+
+            // Set pointer hint
+            node.AddCompilerHint(CompileHintType.PointerHint, this.m_funcPtr);
+            this.m_funcPtr++;
 
             return new CompiledFunction(node.Name) {
                 Instructions = instructions
@@ -287,6 +304,7 @@ namespace HSharp.Compiling {
             List<ByteInstruction> instructions = new List<ByteInstruction>();
             for (int i = 0; i < node.Nodes.Count; i++) {
                 instructions.AddRange(this.CompileNode(node[i], context));
+                // TODO: Check if last method has pushed something to stack that we'll not be using
                 if (!context.Result) {
                     return null;
                 }

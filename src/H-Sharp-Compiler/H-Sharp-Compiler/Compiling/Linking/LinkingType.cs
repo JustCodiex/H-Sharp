@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace HSharp.Compiling.Linking {
     
@@ -15,13 +12,13 @@ namespace HSharp.Compiling.Linking {
 
         public Dictionary<string,ushort> FieldPtrs { get; }
 
-        public Dictionary<string,ulong> MethodPtrs { get; }
+        public Dictionary<string, LinkFunction> MethodPtrs { get; }
 
         public LinkingType(string name, ushort sizeInMem) {
             this.FullName = name;
             this.SizeInMemory = sizeInMem;
             this.FieldPtrs = new Dictionary<string, ushort>();
-            this.MethodPtrs = new Dictionary<string, ulong>();
+            this.MethodPtrs = new Dictionary<string, LinkFunction>();
         }
 
         public byte[] ToBytes() {
@@ -30,8 +27,19 @@ namespace HSharp.Compiling.Linking {
             
             using BinaryWriter writer = new BinaryWriter(stream);
             writer.Write(Encoding.UTF8.GetBytes(FullName));
-            writer.Write((byte)0x0);
+            writer.Write((char)0x0);
             writer.Write(this.SizeInMemory);
+            
+            writer.Write(this.FieldPtrs.Count);
+            foreach (var ptr in this.FieldPtrs) {
+                writer.Write(ptr.Value); // Simply write the offset
+            }
+
+            writer.Write(this.MethodPtrs.Count);
+            foreach (var mptr in this.MethodPtrs) {
+                writer.Write((byte)(mptr.Value is LinkBindPtr ? 1 : 0));
+                writer.Write(mptr.Value.Ptr);
+            }
             
             return stream.ToArray();
 

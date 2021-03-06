@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
@@ -9,6 +10,7 @@ using HSharp.Analysis.Verifying;
 using HSharp.Compiling;
 using HSharp.Compiling.Linking;
 using HSharp.IO;
+using HSharp.IO.Windows;
 using HSharp.Metadata;
 using HSharp.Parsing;
 using HSharp.Parsing.AbstractSnyaxTree;
@@ -21,6 +23,7 @@ namespace HSharp {
         private SourceProject m_currentProject;
         private Stopwatch m_timer;
         private CompileResult m_lastResult;
+        private List<ExternContainer> m_externalBindables;
 
         public bool HasProject => this.m_currentProject is not null;
 
@@ -32,6 +35,7 @@ namespace HSharp {
             this.m_thisLog = null;
             this.m_currentProject = null;
             this.m_timer = null;
+            this.m_externalBindables = new List<ExternContainer>();
             this.m_lastResult = new CompileResult(true, "No compilation");
         }
 
@@ -41,7 +45,8 @@ namespace HSharp {
             this.m_currentProject = project;
 
             // Meta data generation
-            this.m_thisLog = new Log();
+            this.m_thisLog = new();
+            this.m_externalBindables = new();
             this.m_timer = Stopwatch.StartNew();
 
             // Parse all files
@@ -118,7 +123,7 @@ namespace HSharp {
             }
 
             // Apply linking
-            Linker linker = new Linker(astCompiler, globalDomain);
+            Linker linker = new Linker(astCompiler, globalDomain, this.m_externalBindables);
             result = linker.Link();
             if (!result) {
                 return this.FatalError(result);
@@ -183,9 +188,69 @@ namespace HSharp {
 
         }
 
-        private static CompileResult ImportReferences(Domain globalDomain, SourceProject project) {
+        private CompileResult ImportReferences(Domain globalDomain, SourceProject project) {
 
-            Log.WriteLine(" WARNING: References not handled");
+            // Loop over references
+            for (int i = 0; i < project.References.Length; i++) {
+                if (project.References[i] is SourceProjectNativeReference nativeReference) {
+                    switch (nativeReference.TargetLanguage) {
+                        case "C#":
+                        case "CS":
+                            var cse = ImportCsDll(nativeReference, globalDomain);
+                            if (!cse) {
+                                return cse;
+                            }
+                            break;
+                        case "C":
+                        case "C++":
+                        case "C/C++":
+                            var cppe = ImportCCPPDll(nativeReference);
+                            if (!cppe) {
+                                return cppe;
+                            }
+                            break;
+                        default:
+                            return new CompileResult(false, $"Attempt to reference library using language '{nativeReference.TargetLanguage}'. That is not supported.");
+                    }
+                } else if (project.References[i] is SourceProjectReference reference) {
+                    Log.WriteLine("DEV-WARNING: References to other H# libraries currently not implemented!");
+                } else {
+                    Log.WriteLine($"WARNING: Unsupported reference type '{project.References[i].GetType()}'");
+                }
+            }
+
+            return new CompileResult(true);
+
+        }
+
+        private CompileResult ImportCsDll(SourceProjectNativeReference reference, Domain domain) => throw new NotImplementedException();
+
+        private CompileResult ImportCCPPDll(SourceProjectNativeReference reference) {
+
+            // Depending on platform we'll have to do different stuff
+            if (reference.Platform == "Windows") {
+
+                // Get paths
+                string dllfile = reference.ReferencePath;
+                string libfile = dllfile.Replace(".dll", ".lib");
+
+                // Make sure the library file exists
+                if (!File.Exists(libfile)) {
+                    return new CompileResult(false, $"Unable to locate '{libfile}' which is required when referencing C/C++ code.");
+                }
+
+                // Create lib obj
+                Lib lib = new Lib();
+                if (!lib.FromFile(libfile)) {
+                    return new CompileResult(false, $"Failed to read '{libfile}'. Make sure it's a valid lib file!");
+                }
+
+                // Add external bindable
+                this.m_externalBindables.Add(lib);
+
+            } else {
+                return new CompileResult(false, "Attempt to reference a non-windows library. This is currently not supported.");
+            }
 
             return new CompileResult(true);
 
@@ -232,6 +297,7 @@ namespace HSharp {
             program.SetBytes(context?.ConstBytes);
             program.SetStrings(context?.Strings);
             program.SetDeclaredTypes(linker.ExportTypes);
+            program.SetBindTable(linker.Bindings);
 
             // Set program
             return program;

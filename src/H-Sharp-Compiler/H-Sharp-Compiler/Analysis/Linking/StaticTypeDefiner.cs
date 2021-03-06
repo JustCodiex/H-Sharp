@@ -116,21 +116,25 @@ namespace HSharp.Analysis.Linking {
 
         private static CompileResult DefineFunction(FuncDeclNode funcDeclNode, ClassType methodOwner, Domain domain, out FunctionType signature) {
 
+            // Set signature to null by default
             signature = null;
 
+            // Find return type
             HSharpType returnType = domain.First<HSharpType>(funcDeclNode.Return.ToString());
             if (returnType is null) {
                 return new CompileResult(false, $"Unknown method return type '{funcDeclNode.Return}'").SetOrigin(funcDeclNode.Return.Pos);
             }
 
+            // Create parameter list
             List<HSharpType> parameters = new List<HSharpType>();
 
-            // add the "this" parameter
+            // Add the "this" parameter
             SourcePosition pos = funcDeclNode.Pos; // Store position for convenience
             if (methodOwner is not null) {
                 funcDeclNode.Params.InsertParam(0, new ParamsNode.ParameterNode(new TypeIdentifierNode(methodOwner.Name, pos), new IdentifierNode("this", pos), pos));
             }
 
+            // Loop over parameters and add to list
             foreach (ParamsNode.ParameterNode node in funcDeclNode.Params.Parameters) {
                 if (domain.First<HSharpType>(node.Type.ToString()) is HSharpType paramType) {
                     parameters.Add(paramType);
@@ -139,11 +143,17 @@ namespace HSharp.Analysis.Linking {
                 }
             }
 
-            signature = new FunctionType(funcDeclNode.Name, methodOwner, funcDeclNode, returnType, parameters);
+
+            if ((funcDeclNode.GetAccessModifier() & Language.AccessModifier.External) == Language.AccessModifier.External) {
+
+                signature = new ExternalFunctionType(funcDeclNode.Name, methodOwner, funcDeclNode, returnType, parameters);
+            } else {
+                signature = new FunctionType(funcDeclNode.Name, methodOwner, funcDeclNode, returnType, parameters);
+            }
+
             return new CompileResult(true);
 
         }
-
 
     }
 

@@ -115,18 +115,15 @@ namespace HSharp.Analysis.Typechecking {
 
         private (CompileResult, IValType) TypecheckFuncDeclOperation(FuncDeclNode funcDecl, TypeEnvironment tenv, Domain domain) {
 
+            // Declare function types
             TypeEnvironment funTypeEnv = new TypeEnvironment(tenv);
 
+            // Map parameters to types
             foreach (ParamsNode.ParameterNode param in funcDecl.Params.Parameters) {
                 funTypeEnv.MapsTo(param.Identifier.Content, this.TypeOf(param.Type.ToString(), domain));
             }
 
-            // Check scope
-            var bodyResult = this.TypecheckScope(funcDecl.Body, funTypeEnv, domain);
-            if (!bodyResult.Item1) {
-                return (bodyResult.Item1, null);
-            }
-
+            // Get return type
             IValType outType = this.TypeOf(funcDecl.Return.ToString(), domain);
             FunctionType funcType;
             if (domain is ClassType klass) {
@@ -137,21 +134,31 @@ namespace HSharp.Analysis.Typechecking {
                 funcType = domain.Get<FunctionType>(funcDecl.Name);
             }
 
+            // Make sure there's a body to check
+            if (funcDecl.HasBody) {
+
+                // Check scope
+                var bodyResult = this.TypecheckScope(funcDecl.Body, funTypeEnv, domain);
+                if (!bodyResult.Item1) {
+                    return (bodyResult.Item1, null);
+                }
+
+                // Make sure the resulting type is matching up with the declared type
+                if (!this.IsAllSubtypeOf(outType, bodyResult.Item2, out string err) && funcDecl is not ClassCtorDecl) {
+                    return (new CompileResult(false, err).SetOrigin(funcDecl), null);
+                }
+
+            }
+
             if (funcDecl is ClassCtorDecl) { // or is void method
 
                 return (new CompileResult(true), funcType);
 
             } else {
-
-                if (!this.IsAllSubtypeOf(outType, bodyResult.Item2, out string err) && funcDecl is not ClassCtorDecl) {
-                    return (new CompileResult(false, err).SetOrigin(funcDecl), null);
-                } else {
-                    if (!funcType.IsMethod) {
-                        tenv.MapsTo(funcDecl.Name, funcType);
-                    }
-                    return (new CompileResult(true), funcType);
+                if (!funcType.IsMethod) { // Is it an actual function
+                    tenv.MapsTo(funcDecl.Name, funcType);
                 }
-
+                return (new CompileResult(true), funcType);
             }
 
         }
@@ -241,6 +248,7 @@ namespace HSharp.Analysis.Typechecking {
             }
 
         }
+
         private (CompileResult, IValType) TypecheckUnaryOperation(UnaryOpNode unop, TypeEnvironment tenv, Domain domain) {
             
             (CompileResult, IValType) expr = this.TypecheckNode(unop.Expr, tenv, domain);

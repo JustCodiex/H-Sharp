@@ -13,4 +13,8 @@
     <OutputPath>E:\H#\bin\</OutputPath>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="IO\Linux\" />
+  </ItemGroup>
+
 </Project>

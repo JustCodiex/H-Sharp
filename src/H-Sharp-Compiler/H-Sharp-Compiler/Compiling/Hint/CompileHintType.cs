@@ -6,6 +6,8 @@
 
         TypeHint,
 
+        PointerHint,
+
     }
 
 }

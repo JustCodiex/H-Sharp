@@ -41,8 +41,10 @@ namespace HSharp.Analysis.Verifying {
                     foreach (ParamsNode.ParameterNode param in funcDeclNode.Params.Parameters) {
                         param.Identifier.Index = funcScope.Enter(param.Identifier.Content);
                     }
-                    this.VarsNode(funcDeclNode.Body, funcScope);
-                    funcDeclNode.Body.VarIndices = funcDeclNode.Body.VarIndices.Union(this.Exit(new VarScope(), funcScope)).ToArray();
+                    if (funcDeclNode.Body is not null) {
+                        this.VarsNode(funcDeclNode.Body, funcScope);
+                        funcDeclNode.Body.VarIndices = funcDeclNode.Body.VarIndices.Union(this.Exit(new VarScope(), funcScope)).ToArray();
+                    }
                     scope.Enter(funcDeclNode.Name);
                     break;
                 case ClassDeclNode classDeclNode:

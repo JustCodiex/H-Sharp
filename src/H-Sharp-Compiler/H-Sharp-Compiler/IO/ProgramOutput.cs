@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 
 using HSharp.Compiling;
 using HSharp.Compiling.Linking;
+using System.Text;
 
 namespace HSharp.IO {
 
@@ -17,6 +18,7 @@ namespace HSharp.IO {
         private ReadOnlyDictionary<string, ulong> m_strings;
         private SourceProjectType m_projType;
         private List<LinkingType> m_declaredTypes;
+        private BindTable m_bindings;
 
         public ProgramOutput() {
             this.m_strings = new ReadOnlyDictionary<string, ulong>(new Dictionary<string, ulong>());
@@ -38,6 +40,8 @@ namespace HSharp.IO {
 
         public void SetDeclaredTypes(List<LinkingType> types) => this.m_declaredTypes = types;
 
+        public void SetBindTable(BindTable bindTable) => this.m_bindings = bindTable;
+
         public void Save(string outputPath) {
 
             // Delete any existing file
@@ -45,12 +49,14 @@ namespace HSharp.IO {
                 File.Delete(outputPath);
             }
 
+            // Open writer
             using BinaryWriter writer = new BinaryWriter(File.OpenWrite(outputPath));
 
             // header stuff
             writer.Write((byte)this.m_projType);
             writer.Write(this.m_instructionOffset);
             writer.Write(this.m_declaredTypes.Count);
+            writer.Write(this.m_bindings.Size);
 
             for (int i = 0; i < this.m_instructions.Length; i++) {
                 writer.Write((byte)this.m_instructions[i].Op);
@@ -93,6 +99,16 @@ namespace HSharp.IO {
 
             foreach (var export in this.m_declaredTypes) {
                 writer.Write(export.ToBytes());
+            }
+
+            foreach (var binding in this.m_bindings) {
+                writer.Write(binding.Key);
+                byte[] dll = Encoding.UTF8.GetBytes(binding.Value.Source);
+                byte[] func = Encoding.UTF8.GetBytes(binding.Value.SourceName);
+                writer.Write((byte)dll.Length);
+                writer.Write((byte)func.Length);
+                writer.Write(dll);
+                writer.Write(func);
             }
 
         }
@@ -138,6 +154,30 @@ namespace HSharp.IO {
 
                     writer.WriteLine($"\t[{t.FullName}]:");
                     writer.WriteLine($"\t\tSizeInMemory: {t.SizeInMemory}");
+
+                    writer.WriteLine($"\t\tFields [#{t.FieldPtrs.Count}]:");
+                    foreach (var p in t.FieldPtrs) {
+                        writer.WriteLine($"\t\t\t.{p.Key}: 0x{p.Value:X2}");
+                    }
+
+                    writer.WriteLine($"\t\tMethods [#{t.MethodPtrs.Count}]:");
+                    foreach (var m in t.MethodPtrs) {
+                        writer.WriteLine($"\t\t\t.{m.Key}: {m.Value}");
+
+                    }
+
+                }
+
+            }
+
+            if (this.m_bindings.Size > 0) {
+
+                writer.WriteLine();
+                writer.WriteLine($"Bindings [#{this.m_bindings.Size}]:");
+
+                foreach (var binding in this.m_bindings) {
+
+                    writer.WriteLine($"\t0x{binding.Key:X8}: {binding.Value}");
 
                 }
 

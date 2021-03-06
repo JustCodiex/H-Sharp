@@ -1,6 +1,6 @@
 {
   "Name": "Standard Library",
-  "Output": "..\\stdlib_bin\\stdlib.hlib",
+  "Output": "..\\..\\bin\\stdlib.hlib",
   "ProjectType": 2,
   "Sources": [
     {
